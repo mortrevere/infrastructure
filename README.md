@@ -6,10 +6,14 @@ static web roots, and Certbot certificates over SSH.
 ## Files
 
 - `inventory.ini` defines the target host groups.
-- `Dockerfile` installs Terraform and Ansible and can execute this stack directly.
-- `run.sh` builds the local Docker image, runs Terraform first when OVH API and
-  state bucket credentials are available, and passes all arguments through to
+- `Dockerfile` installs Terraform and Ansible in a shared local image.
+- `build.sh` builds the shared local Docker image.
+- `ansible.sh` builds the image and passes all arguments through to
   `ansible-playbook playbook.yml`.
+- `terraform.sh` builds the image, initializes Terraform with the remote state
+  backend, and runs Terraform. With no arguments it runs `apply -auto-approve`.
+- Terraform providers are mirrored into the image at build time and the runtime
+  uses that local mirror instead of downloading providers on the fly.
 - `terraform/` manages OVH DNS records for `below.black`,
   `below.industries`, `leo.surf`, and `yoko.cat`.
 - `playbook.yml` installs nginx/certbot packages, creates the expected web roots,
@@ -27,14 +31,21 @@ static web roots, and Certbot certificates over SSH.
 
 ## Apply
 
+Apply DNS first when needed:
+
 ```bash
-./run.sh --ask-become-pass
+./terraform.sh
 ```
 
-If the OVH API credentials and OVH Object Storage state credentials are set,
-`run.sh` applies the Terraform DNS stack before Ansible. If any required value
-is missing, it prints a warning and runs Ansible only. Set `OVH_ENDPOINT` when
-you need an API endpoint other than the default `ovh-eu`.
+Then apply the server configuration:
+
+```bash
+./ansible.sh --ask-become-pass
+```
+
+`terraform.sh` requires OVH API credentials and OVH Object Storage state
+credentials. Set `OVH_ENDPOINT` when you need an API endpoint other than the
+default `ovh-eu`.
 
 Required Terraform environment:
 
@@ -58,7 +69,7 @@ The container keeps Ansible files in `/ansible`, Terraform files in
 The default target group is `dev`. Select another inventory group with:
 
 ```bash
-./run.sh -e target_hosts=prod --ask-become-pass
+./ansible.sh -e target_hosts=prod --ask-become-pass
 ```
 
 The playbook can create certificates on a fresh host using Certbot webroot
@@ -79,7 +90,7 @@ nginx_sites:
     www_source: leo.surf/build/
 ```
 
-Sources are resolved relative to the workspace root by `run.sh`, or relative to
+Sources are resolved relative to the workspace root by `ansible.sh`, or relative to
 the parent of this directory when running `ansible-playbook` directly. The
 default target is `{{ nginx_html_root }}/{{ name }}/`; set `www_dest` on a site
 only when the server path differs.
@@ -87,19 +98,21 @@ only when the server path differs.
 ## Check
 
 ```bash
-./run.sh --check --diff --ask-become-pass
+./ansible.sh --check --diff --ask-become-pass
 ```
 
 Run a Certbot renewal dry-run explicitly with:
 
 ```bash
-./run.sh -e certbot_renewal_dry_run=true --ask-become-pass
+./ansible.sh -e certbot_renewal_dry_run=true --ask-become-pass
 ```
 
-`run.sh` mounts this directory and the workspace root into the container
+`ansible.sh` mounts this directory and the workspace root into the container
 read-only, mounts `~/.ssh` when present, and forwards `SSH_AUTH_SOCK` when an SSH
-agent is available. Override the image tag with
-`ANSIBLE_IMAGE_NAME=custom-name ./run.sh ...`.
+agent is available. `terraform.sh` mounts the Terraform directory read-only.
+Override the shared image tag with
+`INFRASTRUCTURE_IMAGE_NAME=custom-name ./ansible.sh ...` or
+`INFRASTRUCTURE_IMAGE_NAME=custom-name ./terraform.sh ...`.
 
 ## DNS
 

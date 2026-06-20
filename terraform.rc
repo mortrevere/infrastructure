@@ -1,0 +1,10 @@
+provider_installation {
+  filesystem_mirror {
+    path    = "/terraform-providers"
+    include = ["registry.terraform.io/ovh/ovh"]
+  }
+
+  direct {
+    exclude = ["registry.terraform.io/ovh/ovh"]
+  }
+}

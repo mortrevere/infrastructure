@@ -1,8 +1,5 @@
 FROM debian:bookworm-slim
 
-ENV ANSIBLE_HOST_KEY_CHECKING=True \
-    ANSIBLE_RETRY_FILES_ENABLED=False
-
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         ansible \
@@ -19,7 +16,7 @@ RUN apt-get update \
         terraform \
     && rm -rf /var/lib/apt/lists/*
 
-RUN mkdir -p /ansible /terraform /tmp/ansible /tmp/terraform
+RUN mkdir -p /ansible /terraform /terraform-providers /tmp/ansible /tmp/terraform
 
 WORKDIR /ansible
 
@@ -28,6 +25,13 @@ COPY group_vars /ansible/group_vars
 COPY templates /ansible/templates
 COPY terraform /terraform
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY terraform.rc /etc/terraformrc
+
+ENV TF_CLI_CONFIG_FILE=/etc/terraformrc
+
+RUN TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/terraform init -backend=false -input=false -lockfile=readonly \
+    && TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/terraform providers mirror /terraform-providers \
+    && rm -rf /terraform/.terraform /root/.terraform.d
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD []

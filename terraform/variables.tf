@@ -11,7 +11,7 @@ variable "dns_zones" {
       name  = string
       type  = string
       value = string
-      ttl   = optional(number, 3600)
+      ttl   = optional(number, 300)
     }))
   }))
 
