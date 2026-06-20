@@ -1,0 +1,122 @@
+---
+- name: Install managed Let's Encrypt nginx SSL options when absent
+  ansible.builtin.copy:
+    dest: "{{ letsencrypt_dir }}/options-ssl-nginx.conf"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+    content: |
+      ssl_session_cache shared:le_nginx_SSL:10m;
+      ssl_session_timeout 1440m;
+      ssl_session_tickets off;
+      ssl_protocols TLSv1.2 TLSv1.3;
+      ssl_prefer_server_ciphers off;
+
+- name: Generate managed Let's Encrypt DH parameters when absent
+  ansible.builtin.command:
+    cmd: "openssl dhparam -out {{ letsencrypt_dir }}/ssl-dhparams.pem 2048"
+    creates: "{{ letsencrypt_dir }}/ssl-dhparams.pem"
+  when: not ansible_check_mode
+
+- name: Obtain missing certificates
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly
+      --webroot
+      --webroot-path {{ certbot_webroot }}
+      --cert-name {{ item.name }}
+      {% for domain in item.domains %}-d {{ domain }} {% endfor %}
+      --non-interactive
+      --agree-tos
+      --keep-until-expiring
+      {{ '--staging' if certbot_use_staging else '' }}
+      {{ '--email ' ~ certbot_email if certbot_email | length > 0 else '--register-unsafely-without-email' }}
+  loop: "{{ missing_certbot_certificates }}"
+  register: certbot_initial_issue
+  changed_when: true
+  when:
+    - missing_certbot_certificates | length > 0
+    - not ansible_check_mode
+
+- name: Remove temporary ACME bootstrap nginx config
+  ansible.builtin.file:
+    path: "{{ nginx_conf_dir }}/00-acme-bootstrap.conf"
+    state: absent
+  notify: Reload nginx
+
+- name: Install nginx virtual hosts from YAML model
+  ansible.builtin.template:
+    src: site.conf.j2
+    dest: "{{ nginx_conf_dir }}/{{ item.output }}"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ nginx_sites }}"
+  notify: Reload nginx
+
+- name: Flush nginx reload before certificate reconciliation
+  ansible.builtin.meta: flush_handlers
+
+- name: Ensure configured certificate domains are present
+  ansible.builtin.command:
+    cmd: >-
+      certbot certonly
+      --webroot
+      --webroot-path {{ certbot_webroot }}
+      --cert-name {{ item.name }}
+      {% for domain in item.domains %}-d {{ domain }} {% endfor %}
+      --non-interactive
+      --agree-tos
+      --expand
+      --keep-until-expiring
+      {{ '--staging' if certbot_use_staging else '' }}
+      {{ '--email ' ~ certbot_email if certbot_email | length > 0 else '--register-unsafely-without-email' }}
+  loop: "{{ certbot_certificates }}"
+  register: certbot_domain_reconcile
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Reload nginx after certificate reconciliation
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+  when: not ansible_check_mode
+
+- name: Install nginx reload hook for renewed certificates
+  ansible.builtin.copy:
+    dest: "{{ letsencrypt_dir }}/renewal-hooks/deploy/reload-nginx.sh"
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      set -eu
+      if command -v systemctl >/dev/null 2>&1; then
+          systemctl reload nginx
+      else
+          service nginx reload
+      fi
+
+- name: Enable Certbot automatic renewal timer
+  ansible.builtin.systemd:
+    name: certbot.timer
+    enabled: true
+    state: started
+  when: ansible_service_mgr == "systemd"
+
+- name: Test Certbot renewal path
+  ansible.builtin.command: certbot renew --dry-run
+  changed_when: false
+  when:
+    - certbot_renewal_dry_run | bool
+    - not ansible_check_mode
+
+- name: Reproduce leo home web symlink
+  ansible.builtin.file:
+    src: "{{ nginx_html_root }}"
+    dest: "/home/{{ home_web_symlink_owner }}/www"
+    state: link
+    owner: root
+    group: root
+    follow: false

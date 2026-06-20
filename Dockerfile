@@ -20,7 +20,7 @@ RUN mkdir -p /ansible /terraform /terraform-providers /tmp/ansible /tmp/terrafor
 
 WORKDIR /ansible
 
-COPY ansible.cfg inventory.ini playbook.yml README.md /ansible/
+COPY ansible.cfg inventory.ini playbook.yml jinjapocalypse.yml README.md /ansible/
 COPY group_vars /ansible/group_vars
 COPY templates /ansible/templates
 COPY terraform /terraform

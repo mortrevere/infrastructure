@@ -1,0 +1,90 @@
+---
+- name: Ensure Jinjapocalypse runtime directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - "{{ jinjapocalypse_checkout_dir }}"
+    - "{{ jinjapocalypse_sites_root }}"
+  when: nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list | length > 0
+
+- name: Clone Jinjapocalypse on target host
+  ansible.builtin.git:
+    repo: "{{ jinjapocalypse_repo_url }}"
+    dest: "{{ jinjapocalypse_checkout_dir }}"
+    version: "{{ jinjapocalypse_repo_version }}"
+    update: true
+  register: jinjapocalypse_checkout
+  when:
+    - nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list | length > 0
+    - not ansible_check_mode
+
+- name: Check local Jinjapocalypse Docker image
+  ansible.builtin.command:
+    cmd: "docker image inspect {{ jinjapocalypse_image_name }}"
+  register: jinjapocalypse_image
+  changed_when: false
+  failed_when: false
+  when:
+    - nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list | length > 0
+    - not ansible_check_mode
+
+- name: Build local Jinjapocalypse Docker image
+  ansible.builtin.command:
+    cmd: sh build.sh
+    chdir: "{{ jinjapocalypse_checkout_dir }}"
+  environment:
+    IMAGE_NAME: "{{ jinjapocalypse_image_name }}"
+  when:
+    - nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list | length > 0
+    - not ansible_check_mode
+    - jinjapocalypse_checkout.changed or jinjapocalypse_image.rc != 0
+
+- name: Install Jinjapocalypse site rebuild scripts
+  ansible.builtin.copy:
+    dest: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh"
+    owner: root
+    group: root
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      set -eu
+
+      site_work_dir="{{ jinjapocalypse_sites_root }}/{{ item.name }}"
+      site_dest="{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name) }}"
+
+      mkdir -p "$site_work_dir" "$site_dest"
+      rm -rf "$site_work_dir/build"
+
+      docker run --rm \
+          -u "$(id -u):$(id -g)" \
+          -v "$site_work_dir:/jinjapocalypse" \
+          "{{ jinjapocalypse_image_name }}" \
+          --source-from-git-repo="{{ item.jinjapocalypse_git_source }}"
+
+      find "$site_dest" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+      cp -a "$site_work_dir/build/." "$site_dest/"
+      chown -R root:root "$site_dest"
+  loop: "{{ nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list }}"
+
+- name: Build Jinjapocalypse git-backed sites
+  ansible.builtin.command:
+    cmd: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh"
+  loop: "{{ nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list }}"
+  changed_when: true
+  when: not ansible_check_mode
+
+- name: Install Jinjapocalypse site rebuild cron jobs
+  ansible.builtin.cron:
+    name: "jinjapocalypse rebuild {{ item.name }}"
+    user: root
+    minute: "{{ (item.jinjapocalypse_cron | default({})).get('minute', jinjapocalypse_cron.minute) }}"
+    hour: "{{ (item.jinjapocalypse_cron | default({})).get('hour', jinjapocalypse_cron.hour) }}"
+    day: "{{ (item.jinjapocalypse_cron | default({})).get('day', jinjapocalypse_cron.day) }}"
+    month: "{{ (item.jinjapocalypse_cron | default({})).get('month', jinjapocalypse_cron.month) }}"
+    weekday: "{{ (item.jinjapocalypse_cron | default({})).get('weekday', jinjapocalypse_cron.weekday) }}"
+    job: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh >/var/log/jinjapocalypse-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.log 2>&1"
+  loop: "{{ nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list }}"

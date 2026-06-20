@@ -1,15 +1,5 @@
 ---
-nginx_html_root: /usr/share/nginx/html
-nginx_conf_dir: /etc/nginx/conf.d
 home_web_symlink_owner: leo
-www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
-
-letsencrypt_dir: /etc/letsencrypt
-letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
-certbot_webroot: /var/www/letsencrypt
-certbot_email: ""
-certbot_use_staging: false
-certbot_renewal_dry_run: false
 
 certbot_certificates:
   - name: below.black
@@ -54,6 +44,7 @@ nginx_sites:
             cors_any_origin: true
 
   - name: below.industries
+    jinjapocalypse_git_source: https://github.com/beLow-Industries/below.industries.git
     output: below.industries.conf
     servers:
       - names:

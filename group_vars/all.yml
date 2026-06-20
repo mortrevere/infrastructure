@@ -1,0 +1,23 @@
+---
+nginx_html_root: /usr/share/nginx/html
+nginx_conf_dir: /etc/nginx/conf.d
+www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
+
+jinjapocalypse_repo_url: https://github.com/mortrevere/jinjapocalypse.git
+jinjapocalypse_repo_version: HEAD
+jinjapocalypse_checkout_dir: /opt/jinjapocalypse
+jinjapocalypse_sites_root: /var/lib/jinjapocalypse-sites
+jinjapocalypse_image_name: jinjapocalypse
+jinjapocalypse_cron:
+  minute: "0"
+  hour: "*"
+  day: "*"
+  month: "*"
+  weekday: "*"
+
+letsencrypt_dir: /etc/letsencrypt
+letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
+certbot_webroot: /var/www/letsencrypt
+certbot_email: ""
+certbot_use_staging: false
+certbot_renewal_dry_run: false

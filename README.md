@@ -16,14 +16,16 @@ static web roots, and Certbot certificates over SSH.
   uses that local mirror instead of downloading providers on the fly.
 - `terraform/` manages OVH DNS records for `below.black`,
   `below.industries`, `leo.surf`, and `yoko.cat`.
-- `playbook.yml` installs nginx/certbot packages, creates the expected web roots,
-  deploys static site content declared with `www_source`,
+- `playbook.yml` installs nginx/certbot/docker/git packages, creates the expected web roots,
+  deploys static site content declared with `www_source`, builds git-backed
+  Jinjapocalypse sites declared with `jinjapocalypse_git_source`,
   bootstraps missing certificates, installs nginx config files, enables Certbot
   renewal, recreates `/home/<owner>/www -> /usr/share/nginx/html`, and reloads
   nginx after `nginx -t` passes.
-- `group_vars/dev.yml` and `group_vars/prod.yml` are the environment-specific
-  source of truth for websites, server blocks, certificate lineages, web roots,
-  redirects, cache headers, proxy rules, and static content sources.
+- `group_vars/all.yml` contains shared defaults. `group_vars/dev.yml` and
+  `group_vars/prod.yml` are the environment-specific source of truth for
+  websites, server blocks, certificate lineages, web roots, redirects, cache
+  headers, proxy rules, and static content sources.
 - `templates/site.conf.j2` renders final nginx site configs from the selected
   environment variables.
 - `templates/acme-bootstrap.conf.j2` renders temporary HTTP-only nginx config for
@@ -81,8 +83,9 @@ notices. If it is empty, the playbook registers without an email address.
 
 ## Static Content
 
-Set `www_source` on an `nginx_sites` entry to copy local content into that site's
-web root on the target server:
+Local uploads are optional. Set `www_source` on an `nginx_sites` entry only when
+you want Ansible to copy local content into that site's web root on the target
+server:
 
 ```yaml
 nginx_sites:
@@ -94,6 +97,35 @@ Sources are resolved relative to the workspace root by `ansible.sh`, or relative
 the parent of this directory when running `ansible-playbook` directly. The
 default target is `{{ nginx_html_root }}/{{ name }}/`; set `www_dest` on a site
 only when the server path differs.
+
+Set `jinjapocalypse_git_source` on an `nginx_sites` entry to build the site on
+the target server from a git repository:
+
+```yaml
+nginx_sites:
+  - name: below.industries
+    jinjapocalypse_git_source: https://github.com/beLow-Industries/below.industries.git
+```
+
+When at least one site uses `jinjapocalypse_git_source`, the playbook installs
+Docker and git, clones `jinjapocalypse_repo_url` to `jinjapocalypse_checkout_dir`,
+builds the local `jinjapocalypse_image_name` Docker image with `build.sh`,
+installs `/usr/local/sbin/jinjapocalypse-build-<site>.sh`, runs it once, and
+adds a root cron job. The default cron schedule is hourly:
+
+```yaml
+jinjapocalypse_cron:
+  minute: "0"
+  hour: "*"
+  day: "*"
+  month: "*"
+  weekday: "*"
+```
+
+Override `jinjapocalypse_cron` globally or set the same mapping on an individual
+site. The generated rebuild script runs Jinjapocalypse with
+`--source-from-git-repo=<repo>`, then replaces the configured web root with the
+new `build/` output.
 
 ## Check
 

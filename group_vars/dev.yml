@@ -1,15 +1,5 @@
 ---
-nginx_html_root: /usr/share/nginx/html
-nginx_conf_dir: /etc/nginx/conf.d
 home_web_symlink_owner: debian
-www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
-
-letsencrypt_dir: /etc/letsencrypt
-letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
-certbot_webroot: /var/www/letsencrypt
-certbot_email: ""
-certbot_use_staging: false
-certbot_renewal_dry_run: false
 
 certbot_certificates:
   - name: leo.surf
@@ -31,7 +21,7 @@ nginx_required_directories:
 
 nginx_sites:
   - name: leo.surf
-    www_source: leo.surf/build/
+    jinjapocalypse_git_source: https://github.com/mortrevere/leo.surf.git
     output: leo.surf.conf
     servers:
       - names:

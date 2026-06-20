@@ -1,0 +1,66 @@
+---
+- name: Require Debian-family host
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: This playbook targets Debian-family nginx hosts.
+
+- name: Install nginx and certbot packages
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - certbot
+      - openssl
+      - cron
+      - docker.io
+      - git
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure Docker service is enabled and running
+  ansible.builtin.service:
+    name: docker
+    enabled: true
+    state: started
+
+- name: Ensure cron service is enabled and running
+  ansible.builtin.service:
+    name: cron
+    enabled: true
+    state: started
+
+- name: Ensure nginx, web root, and Certbot directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: "{{ nginx_required_directories }}"
+
+- name: Ensure web content target directories exist
+  ansible.builtin.file:
+    path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name) }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop: >-
+    {{
+      (nginx_sites | selectattr('www_source', 'defined') | list)
+      + (nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list)
+    }}
+
+- name: Deploy web content from declared site sources
+  ansible.builtin.copy:
+    src: "{{ www_source_root }}/{{ item.www_source | regex_replace('^/+', '') }}"
+    dest: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') }}"
+    owner: root
+    group: root
+    mode: preserve
+    directory_mode: "0755"
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+
+- name: Configure Jinjapocalypse git-backed sites
+  ansible.builtin.include_tasks: jinjapocalypse.yml

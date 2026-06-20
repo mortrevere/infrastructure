@@ -17,6 +17,7 @@ docker_args=(
   -v "${SCRIPT_DIR}/ansible.cfg:/ansible/ansible.cfg:ro"
   -v "${SCRIPT_DIR}/inventory.ini:/ansible/inventory.ini:ro"
   -v "${SCRIPT_DIR}/playbook.yml:/ansible/playbook.yml:ro"
+  -v "${SCRIPT_DIR}/jinjapocalypse.yml:/ansible/jinjapocalypse.yml:ro"
   -v "${SCRIPT_DIR}/README.md:/ansible/README.md:ro"
   -v "${SCRIPT_DIR}/group_vars:/ansible/group_vars:ro"
   -v "${SCRIPT_DIR}/templates:/ansible/templates:ro"
