@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+WORKSPACE_DIR="${SCRIPT_DIR}"
 IMAGE_NAME="${INFRASTRUCTURE_IMAGE_NAME:-below-black-infrastructure:local}"
 
 "${SCRIPT_DIR}/build.sh"
@@ -14,13 +14,7 @@ docker_args=(
   -e TERM="${TERM:-xterm}"
   -e ANSIBLE_FORCE_COLOR="${ANSIBLE_FORCE_COLOR:-true}"
   -e ANSIBLE_WWW_SOURCE_ROOT=/workspace
-  -v "${SCRIPT_DIR}/ansible.cfg:/ansible/ansible.cfg:ro"
-  -v "${SCRIPT_DIR}/inventory.ini:/ansible/inventory.ini:ro"
-  -v "${SCRIPT_DIR}/playbook.yml:/ansible/playbook.yml:ro"
-  -v "${SCRIPT_DIR}/jinjapocalypse.yml:/ansible/jinjapocalypse.yml:ro"
-  -v "${SCRIPT_DIR}/README.md:/ansible/README.md:ro"
-  -v "${SCRIPT_DIR}/group_vars:/ansible/group_vars:ro"
-  -v "${SCRIPT_DIR}/templates:/ansible/templates:ro"
+  -v "${SCRIPT_DIR}/ansible:/ansible:ro"
   -v "${WORKSPACE_DIR}:/workspace:ro"
   --add-host leo.surf:91.134.140.52
 )

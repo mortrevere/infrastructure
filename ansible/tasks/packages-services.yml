@@ -63,4 +63,4 @@
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
 
 - name: Configure Jinjapocalypse git-backed sites
-  ansible.builtin.include_tasks: jinjapocalypse.yml
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/jinjapocalypse.yml"

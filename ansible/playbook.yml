@@ -6,13 +6,13 @@
 
   tasks:
     - name: Manage packages and services
-      ansible.builtin.include_tasks: tasks/packages-services.yml
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/packages-services.yml"
 
     - name: Prepare nginx for ACME bootstrap
-      ansible.builtin.include_tasks: tasks/nginx.yml
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/nginx.yml"
 
     - name: Manage Let's Encrypt certificates
-      ansible.builtin.include_tasks: tasks/letsencrypt-certificates.yml
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/letsencrypt-certificates.yml"
 
   handlers:
     - name: Validate nginx
