@@ -1,0 +1,17 @@
+{% for certificate in certbot_certificates %}
+server {
+    listen 80;
+    server_name {{ certificate.domains | join(' ') }};
+
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ certbot_webroot }};
+        default_type text/plain;
+    }
+
+    location / {
+        default_type text/plain;
+        return 200 "ACME bootstrap for {{ certificate.name }}\n";
+    }
+}
+
+{% endfor %}

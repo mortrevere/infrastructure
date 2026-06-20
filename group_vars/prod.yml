@@ -1,0 +1,135 @@
+---
+nginx_html_root: /usr/share/nginx/html
+nginx_conf_dir: /etc/nginx/conf.d
+home_web_symlink_owner: leo
+www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
+
+letsencrypt_dir: /etc/letsencrypt
+letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
+certbot_webroot: /var/www/letsencrypt
+certbot_email: ""
+certbot_use_staging: false
+certbot_renewal_dry_run: false
+
+certbot_certificates:
+  - name: below.black
+    domains:
+      - below.black
+      - www.below.black
+  - name: below.industries
+    domains:
+      - below.industries
+  - name: leshauts.xyz
+    domains:
+      - leshauts.xyz
+
+managed_nginx_conf_files:
+  - default.conf
+  - below.black.conf
+  - below.industries.conf
+  - grossemer.de.conf
+  - leshauts.xyz.conf
+
+nginx_required_directories:
+  - "{{ nginx_conf_dir }}"
+  - "{{ nginx_html_root }}"
+  - "{{ nginx_html_root }}/mer.de/grossemer.de"
+  - "{{ nginx_html_root }}/below.industries"
+  - "{{ nginx_html_root }}/romejko/build"
+  - "{{ nginx_html_root }}/hydrologie"
+  - "{{ nginx_html_root }}/below.black"
+  - "{{ certbot_webroot }}"
+  - "{{ letsencrypt_dir }}"
+  - "{{ letsencrypt_dir }}/renewal-hooks/deploy"
+
+nginx_sites:
+  - name: grossemer.de
+    output: grossemer.de.conf
+    servers:
+      - names:
+          - grossemer.de
+        locations:
+          - path: /
+            root: "{{ nginx_html_root }}/mer.de/grossemer.de/"
+            cors_any_origin: true
+
+  - name: below.industries
+    output: below.industries.conf
+    servers:
+      - names:
+          - below.industries
+        ssl:
+          cert_name: below.industries
+          include_options: false
+        locations:
+          - path: /
+            root: "{{ nginx_html_root }}/below.industries/"
+            cors_any_origin: true
+
+      - names:
+          - below.industries
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+  - name: leshauts.xyz
+    output: leshauts.xyz.conf
+    servers:
+      - names:
+          - leshauts.xyz
+        ssl:
+          cert_name: leshauts.xyz
+          include_options: true
+        locations:
+          - path: /hydrologie/
+            root: "{{ nginx_html_root }}"
+          - path: /
+            root: "{{ nginx_html_root }}/romejko/build"
+        error_pages: true
+
+      - names:
+          - leshauts.xyz
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+  - name: below.black
+    output: below.black.conf
+    servers:
+      - names:
+          - below.black
+        root: "{{ nginx_html_root }}/below.black"
+        no_cache: true
+        ssl:
+          cert_name: below.black
+          include_options: true
+        proxy_locations:
+          - path: /api/
+            upstream: http://localhost:8000/api/
+            cors: true
+
+      - names:
+          - www.below.black
+        root: "{{ nginx_html_root }}/below.black"
+        return_directive: "301 https://below.black$request_uri"
+        ssl:
+          cert_name: below.black
+          include_options: true
+
+      - names:
+          - below.black
+        listen:
+          - "80"
+        root: "{{ nginx_html_root }}/below.black"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+      - names:
+          - www.below.black
+        listen:
+          - "80"
+        root: "{{ nginx_html_root }}/below.black"
+        acme_challenge: true
+        redirect_to_https: "https://below.black$request_uri"

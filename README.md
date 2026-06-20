@@ -1,0 +1,108 @@
+# Infrastructure stack
+
+Minimal Terraform and Ansible stack for managing OVH DNS records, nginx sites,
+static web roots, and Certbot certificates over SSH.
+
+## Files
+
+- `inventory.ini` defines the target host groups.
+- `Dockerfile` installs Terraform and Ansible and can execute this stack directly.
+- `run.sh` builds the local Docker image, runs Terraform first when OVH API and
+  state bucket credentials are available, and passes all arguments through to
+  `ansible-playbook playbook.yml`.
+- `terraform/` manages OVH DNS records for `below.black`,
+  `below.industries`, `leo.surf`, and `yoko.cat`.
+- `playbook.yml` installs nginx/certbot packages, creates the expected web roots,
+  deploys static site content declared with `www_source`,
+  bootstraps missing certificates, installs nginx config files, enables Certbot
+  renewal, recreates `/home/<owner>/www -> /usr/share/nginx/html`, and reloads
+  nginx after `nginx -t` passes.
+- `group_vars/dev.yml` and `group_vars/prod.yml` are the environment-specific
+  source of truth for websites, server blocks, certificate lineages, web roots,
+  redirects, cache headers, proxy rules, and static content sources.
+- `templates/site.conf.j2` renders final nginx site configs from the selected
+  environment variables.
+- `templates/acme-bootstrap.conf.j2` renders temporary HTTP-only nginx config for
+  first-time ACME HTTP-01 certificate issuance.
+
+## Apply
+
+```bash
+./run.sh --ask-become-pass
+```
+
+If the OVH API credentials and OVH Object Storage state credentials are set,
+`run.sh` applies the Terraform DNS stack before Ansible. If any required value
+is missing, it prints a warning and runs Ansible only. Set `OVH_ENDPOINT` when
+you need an API endpoint other than the default `ovh-eu`.
+
+Required Terraform environment:
+
+```bash
+export OVH_APPLICATION_KEY=...
+export OVH_APPLICATION_SECRET=...
+export OVH_CONSUMER_KEY=...
+export OVH_TF_STATE_BUCKET=...
+export OVH_TF_STATE_REGION=...
+export OVH_TF_STATE_ENDPOINT=https://s3.<region>.io.cloud.ovh.net
+export OVH_TF_STATE_ACCESS_KEY=...
+export OVH_TF_STATE_SECRET_KEY=...
+```
+
+`OVH_TF_STATE_KEY` is optional and defaults to
+`infrastructure/terraform.tfstate`.
+
+The container keeps Ansible files in `/ansible`, Terraform files in
+`/terraform`, and scratch data under `/tmp/ansible` and `/tmp/terraform`.
+
+The default target group is `dev`. Select another inventory group with:
+
+```bash
+./run.sh -e target_hosts=prod --ask-become-pass
+```
+
+The playbook can create certificates on a fresh host using Certbot webroot
+validation. DNS for each configured domain must point at the server and inbound
+port `80` must be reachable from the public Internet.
+
+Set `certbot_email` in the relevant `group_vars/*.yml` file if you want Let's Encrypt expiry
+notices. If it is empty, the playbook registers without an email address.
+
+## Static Content
+
+Set `www_source` on an `nginx_sites` entry to copy local content into that site's
+web root on the target server:
+
+```yaml
+nginx_sites:
+  - name: leo.surf
+    www_source: leo.surf/build/
+```
+
+Sources are resolved relative to the workspace root by `run.sh`, or relative to
+the parent of this directory when running `ansible-playbook` directly. The
+default target is `{{ nginx_html_root }}/{{ name }}/`; set `www_dest` on a site
+only when the server path differs.
+
+## Check
+
+```bash
+./run.sh --check --diff --ask-become-pass
+```
+
+Run a Certbot renewal dry-run explicitly with:
+
+```bash
+./run.sh -e certbot_renewal_dry_run=true --ask-become-pass
+```
+
+`run.sh` mounts this directory and the workspace root into the container
+read-only, mounts `~/.ssh` when present, and forwards `SSH_AUTH_SOCK` when an SSH
+agent is available. Override the image tag with
+`ANSIBLE_IMAGE_NAME=custom-name ./run.sh ...`.
+
+## DNS
+
+Copy `terraform/dns.auto.tfvars.example` to `terraform/dns.auto.tfvars` and add
+the managed A, AAAA, and CNAME records for each zone. Terraform intentionally
+starts with empty record lists so it does not invent DNS targets.

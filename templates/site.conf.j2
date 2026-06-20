@@ -1,0 +1,84 @@
+{% for server in item.servers %}
+server {
+{% for listen in server.listen | default([]) %}
+    listen {{ listen }};
+{% endfor %}
+{% if server.ssl is defined %}
+    listen 443 ssl;
+{% endif %}
+    server_name {{ server.names | join(' ') }};
+{% if server.root is defined %}
+    root {{ server.root }};
+{% endif %}
+{% if server.no_cache | default(false) %}
+
+    add_header Last-Modified $date_gmt;
+    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
+    if_modified_since off;
+    expires off;
+    etag off;
+{% endif %}
+{% if server.acme_challenge | default(false) %}
+
+    location ^~ /.well-known/acme-challenge/ {
+        root {{ certbot_webroot }};
+        default_type text/plain;
+    }
+{% endif %}
+{% for location in server.locations | default([]) %}
+
+    location {{ location.path }} {
+        root   {{ location.root }};
+        index  {{ location.index | default('index.html index.htm') }};
+{% if location.cors_any_origin | default(false) %}
+        add_header Access-Control-Allow-Origin *;
+{% endif %}
+    }
+{% endfor %}
+{% for proxy in server.proxy_locations | default([]) %}
+
+    location {{ proxy.path }} {
+{% if proxy.cors | default(false) %}
+        add_header 'Access-Control-Allow-Origin' '*';
+        add_header 'Access-Control-Allow-Credentials' 'true';
+        add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,token';
+        add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
+{% endif %}
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_pass {{ proxy.upstream }};
+    }
+{% endfor %}
+{% if server.redirect_to_https is defined %}
+
+    location / {
+        return 301 {{ server.redirect_to_https }};
+    }
+{% endif %}
+{% if server.return_directive is defined %}
+
+    return {{ server.return_directive }};
+{% endif %}
+{% if server.error_pages | default(false) %}
+
+    error_page   500 502 503 504  /50x.html;
+    location = /50x.html {
+        root   {{ nginx_html_root }};
+    }
+{% endif %}
+{% if server.ssl is defined %}
+
+    ssl_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/fullchain.pem;
+    ssl_certificate_key {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/privkey.pem;
+{% if server.ssl.include_options | default(false) %}
+    include /etc/letsencrypt/options-ssl-nginx.conf;
+    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
+{% endif %}
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    ssl_trusted_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/chain.pem;
+    ssl_stapling on;
+    ssl_stapling_verify on;
+{% endif %}
+}
+
+{% endfor %}

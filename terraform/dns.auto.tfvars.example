@@ -1,0 +1,28 @@
+dns_zones = {
+  "below.black" = {
+    records = [
+      {
+        name  = ""
+        type  = "A"
+        value = "91.134.140.52"
+      },
+      {
+        name  = "www"
+        type  = "CNAME"
+        value = "below.black."
+      },
+    ]
+  }
+
+  "below.industries" = {
+    records = []
+  }
+
+  "leo.surf" = {
+    records = []
+  }
+
+  "yoko.cat" = {
+    records = []
+  }
+}
