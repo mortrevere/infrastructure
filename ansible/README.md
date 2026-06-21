@@ -16,7 +16,8 @@ static web roots, and Certbot certificates over SSH.
   uses that local mirror instead of downloading providers on the fly.
 - `terraform/` manages OVH DNS records for `below.black`,
   `below.industries`, `leo.surf`, and `yoko.cat`.
-- `playbook.yml` installs nginx/certbot/docker/git/nftables packages, creates the expected web roots,
+- `playbook.yml` installs nginx/certbot/git/nftables packages, installs the latest Docker Engine
+  from Docker's upstream apt repository with the Compose plugin, creates the expected web roots,
   deploys static site content declared with `www_source`, builds git-backed
   Jinjapocalypse sites declared with `jinjapocalypse_git_source`,
   bootstraps missing certificates, installs the nftables firewall policy,
@@ -81,6 +82,10 @@ port `80` must be reachable from the public Internet.
 
 The firewall is managed by nftables and only allows inbound TCP ports `22`,
 `80`, and `443`, plus established traffic and loopback.
+
+Docker is configured to use the nftables firewall backend and the host enables
+IP forwarding so Compose bridge networks can be created without Docker trying to
+touch legacy iptables chains.
 
 Set `certbot_email` in the relevant `group_vars/*.yml` file if you want Let's Encrypt expiry
 notices. If it is empty, the playbook registers without an email address.
