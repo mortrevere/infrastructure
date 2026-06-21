@@ -7,9 +7,7 @@
     mode: "0644"
     force: false
     content: |
-      ssl_session_cache shared:le_nginx_SSL:10m;
-      ssl_session_timeout 1440m;
-      ssl_session_tickets off;
+      # Managed by infrastructure; shared SSL settings live in the nginx site template.
 
 - name: Generate managed Let's Encrypt DH parameters when absent
   ansible.builtin.command:
