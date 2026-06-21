@@ -9,12 +9,6 @@
     content: |
       # Managed by infrastructure; shared SSL settings live in the nginx site template.
 
-- name: Generate managed Let's Encrypt DH parameters when absent
-  ansible.builtin.command:
-    cmd: "openssl dhparam -out {{ letsencrypt_dir }}/ssl-dhparams.pem 2048"
-    creates: "{{ letsencrypt_dir }}/ssl-dhparams.pem"
-  when: not ansible_check_mode
-
 - name: Obtain missing certificates
   ansible.builtin.command:
     cmd: >-

@@ -81,7 +81,6 @@ server {
     ssl_certificate_key {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/privkey.pem;
 {% if server.ssl.include_options | default(false) %}
     include /etc/letsencrypt/options-ssl-nginx.conf;
-    ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
 {% endif %}
     add_header Strict-Transport-Security "max-age=31536000" always;
     ssl_trusted_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/chain.pem;
