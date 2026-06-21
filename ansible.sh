@@ -16,7 +16,6 @@ docker_args=(
   -e ANSIBLE_WWW_SOURCE_ROOT=/workspace
   -v "${SCRIPT_DIR}/ansible:/ansible:ro"
   -v "${WORKSPACE_DIR}:/workspace:ro"
-  --add-host leo.surf:91.134.140.52
 )
 
 if [[ -d "${HOME}/.ssh" ]]; then

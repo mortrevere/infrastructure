@@ -47,6 +47,11 @@ dns_zones = {
         value = "91.134.140.52"
       },
       {
+        name  = "stats"
+        type  = "A"
+        value = "91.134.140.52"
+      },
+      {
         name  = ""
         type  = "CAA"
         value = "0 issue \"letsencrypt.org\""
