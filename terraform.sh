@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-IMAGE_NAME="${INFRASTRUCTURE_IMAGE_NAME:-below-black-infrastructure:local}"
+IMAGE_NAME="${INFRASTRUCTURE_IMAGE_NAME:-infrastructure:local}"
 
 "${SCRIPT_DIR}/build.sh"
 

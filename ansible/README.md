@@ -154,6 +154,7 @@ agent is available. `terraform.sh` mounts the Terraform directory read-only.
 Override the shared image tag with
 `INFRASTRUCTURE_IMAGE_NAME=custom-name ./ansible.sh ...` or
 `INFRASTRUCTURE_IMAGE_NAME=custom-name ./terraform.sh ...`.
+The default tag is `infrastructure:local`.
 
 ## DNS
 
