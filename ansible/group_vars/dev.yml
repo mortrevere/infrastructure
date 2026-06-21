@@ -34,6 +34,12 @@ nginx_sites:
           - path: /
             root: "{{ nginx_html_root }}/leo.surf/"
             cors_any_origin: true
+        proxy_locations:
+          - path: /umami
+            exact: true
+            redirect_to: /umami/
+          - path: /umami/
+            upstream: http://localhost:3000/
       - names:
           - leo.surf
         listen:

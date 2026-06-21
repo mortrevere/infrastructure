@@ -38,7 +38,10 @@ server {
 {% endfor %}
 {% for proxy in server.proxy_locations | default([]) %}
 
-    location {{ proxy.path }} {
+    location{% if proxy.exact | default(false) %} ={% endif %} {{ proxy.path }} {
+{% if proxy.redirect_to is defined %}
+        return {{ proxy.redirect_code | default(301) }} {{ proxy.redirect_to }};
+{% else %}
         add_header Strict-Transport-Security "max-age=31536000" always;
 {% if proxy.cors | default(false) %}
         add_header 'Access-Control-Allow-Origin' '*';
@@ -48,7 +51,12 @@ server {
 {% endif %}
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Host $host;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_redirect off;
         proxy_pass {{ proxy.upstream }};
+{% endif %}
     }
 {% endfor %}
 {% if server.redirect_to_https is defined %}
