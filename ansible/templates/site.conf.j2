@@ -68,6 +68,10 @@ server {
 {% endif %}
 {% if server.ssl is defined %}
 
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
+    ssl_conf_command Ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256;
+    ssl_prefer_server_ciphers on;
     ssl_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/fullchain.pem;
     ssl_certificate_key {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/privkey.pem;
 {% if server.ssl.include_options | default(false) %}
