@@ -18,18 +18,22 @@ RUN apt-get update \
 
 RUN mkdir -p /ansible /terraform /terraform-providers /tmp/ansible /tmp/terraform
 
-WORKDIR /ansible
+COPY terraform/provider.tf /terraform/provider.tf
 
-COPY ansible /ansible
-COPY terraform /terraform
+RUN mkdir -p /tmp/terraform-mirror \
+    && cp /terraform/provider.tf /tmp/terraform-mirror/provider.tf \
+    && TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/tmp/terraform-mirror init -backend=false -input=false \
+    && TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/tmp/terraform-mirror providers mirror /terraform-providers \
+    && rm -rf /tmp/terraform-mirror /root/.terraform.d
+
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 COPY terraform.rc /etc/terraformrc
+COPY terraform /terraform
+COPY ansible /ansible
+
+WORKDIR /ansible
 
 ENV TF_CLI_CONFIG_FILE=/etc/terraformrc
-
-RUN TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/terraform init -backend=false -input=false -lockfile=readonly \
-    && TF_CLI_CONFIG_FILE=/dev/null terraform -chdir=/terraform providers mirror /terraform-providers \
-    && rm -rf /terraform/.terraform /root/.terraform.d
 
 ENTRYPOINT ["docker-entrypoint.sh"]
 CMD []

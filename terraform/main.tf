@@ -1,7 +1,3 @@
-provider "ovh" {
-  endpoint = var.ovh_endpoint
-}
-
 locals {
   dns_records = flatten([
     for zone_name, zone in var.dns_zones : [
