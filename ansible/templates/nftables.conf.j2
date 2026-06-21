@@ -1,7 +1,5 @@
 #!/usr/sbin/nft -f
 
-flush ruleset
-
 table inet filter {
     chain input {
         type filter hook input priority 0; policy drop;
@@ -12,10 +10,6 @@ table inet filter {
 {% for port in firewall_allowed_tcp_ports | unique | sort %}
         tcp dport {{ port }} accept
 {% endfor %}
-    }
-
-    chain forward {
-        type filter hook forward priority 0; policy drop;
     }
 
     chain output {

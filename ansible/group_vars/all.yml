@@ -4,10 +4,15 @@ nginx_conf_dir: /etc/nginx/conf.d
 www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
 
 firewall_nftables_conf: /etc/nftables.conf
+docker_daemon_config_dir: /etc/docker
+docker_daemon_config_file: /etc/docker/daemon.json
 firewall_allowed_tcp_ports:
   - 22
   - 80
   - 443
+
+docker_daemon_firewall_backend: nftables
+docker_ip_forward: true
 
 jinjapocalypse_repo_url: https://github.com/mortrevere/jinjapocalypse.git
 jinjapocalypse_repo_version: HEAD
@@ -20,6 +25,10 @@ jinjapocalypse_cron:
   day: "*"
   month: "*"
   weekday: "*"
+
+umami_repo_url: https://github.com/umami-software/umami.git
+umami_repo_version: HEAD
+umami_checkout_dir: /opt/umami
 
 letsencrypt_dir: /etc/letsencrypt
 letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
