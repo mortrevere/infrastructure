@@ -8,6 +8,12 @@
     - name: Manage packages and services
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/packages-services.yml"
 
+    - name: Manage nftables firewall
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/firewall.yml"
+
+    - name: Flush nftables reload before continuing
+      ansible.builtin.meta: flush_handlers
+
     - name: Prepare nginx for ACME bootstrap
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/nginx.yml"
 
@@ -25,3 +31,9 @@
         name: nginx
         state: reloaded
       listen: Reload nginx
+
+    - name: Restart nftables service
+      ansible.builtin.service:
+        name: nftables
+        state: restarted
+      listen: Restart nftables

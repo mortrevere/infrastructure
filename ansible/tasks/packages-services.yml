@@ -12,6 +12,7 @@
       - certbot
       - openssl
       - cron
+      - nftables
       - docker.io
       - git
     state: present

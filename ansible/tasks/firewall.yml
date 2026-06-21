@@ -1,0 +1,16 @@
+---
+- name: Install nftables firewall policy
+  ansible.builtin.template:
+    src: nftables.conf.j2
+    dest: "{{ firewall_nftables_conf }}"
+    owner: root
+    group: root
+    mode: "0644"
+    validate: "nft -c -f %s"
+  notify: Restart nftables
+
+- name: Ensure nftables service is enabled and running
+  ansible.builtin.service:
+    name: nftables
+    enabled: true
+    state: started

@@ -16,12 +16,13 @@ static web roots, and Certbot certificates over SSH.
   uses that local mirror instead of downloading providers on the fly.
 - `terraform/` manages OVH DNS records for `below.black`,
   `below.industries`, `leo.surf`, and `yoko.cat`.
-- `playbook.yml` installs nginx/certbot/docker/git packages, creates the expected web roots,
+- `playbook.yml` installs nginx/certbot/docker/git/nftables packages, creates the expected web roots,
   deploys static site content declared with `www_source`, builds git-backed
   Jinjapocalypse sites declared with `jinjapocalypse_git_source`,
-  bootstraps missing certificates, installs nginx config files, enables Certbot
-  renewal, recreates `/home/<owner>/www -> /usr/share/nginx/html`, and reloads
-  nginx after `nginx -t` passes.
+  bootstraps missing certificates, installs the nftables firewall policy,
+  installs nginx config files, enables Certbot renewal, recreates
+  `/home/<owner>/www -> /usr/share/nginx/html`, and reloads nginx after
+  `nginx -t` passes.
 - `group_vars/all.yml` contains shared defaults. `group_vars/dev.yml` and
   `group_vars/prod.yml` are the environment-specific source of truth for
   websites, server blocks, certificate lineages, web roots, redirects, cache
@@ -77,6 +78,9 @@ The default target group is `dev`. Select another inventory group with:
 The playbook can create certificates on a fresh host using Certbot webroot
 validation. DNS for each configured domain must point at the server and inbound
 port `80` must be reachable from the public Internet.
+
+The firewall is managed by nftables and only allows inbound TCP ports `22`,
+`80`, and `443`, plus established traffic and loopback.
 
 Set `certbot_email` in the relevant `group_vars/*.yml` file if you want Let's Encrypt expiry
 notices. If it is empty, the playbook registers without an email address.
