@@ -5,7 +5,7 @@ variable "ovh_endpoint" {
 }
 
 variable "dns_zones" {
-  description = "OVH DNS zones and their managed A, AAAA, and CNAME records."
+  description = "OVH DNS zones and their managed A, AAAA, CNAME, and CAA records."
   type = map(object({
     records = list(object({
       name  = string
@@ -33,10 +33,10 @@ variable "dns_zones" {
   validation {
     condition = alltrue(flatten([
       for zone in values(var.dns_zones) : [
-        for record in zone.records : contains(["A", "AAAA", "CNAME"], upper(record.type))
+        for record in zone.records : contains(["A", "AAAA", "CNAME", "CAA"], upper(record.type))
       ]
     ]))
-    error_message = "DNS records may only use A, AAAA, or CNAME."
+    error_message = "DNS records may only use A, AAAA, CNAME, or CAA."
   }
 
   validation {

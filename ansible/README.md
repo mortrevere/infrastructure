@@ -149,5 +149,5 @@ Override the shared image tag with
 ## DNS
 
 Copy `terraform/dns.auto.tfvars.example` to `terraform/dns.auto.tfvars` and add
-the managed A, AAAA, and CNAME records for each zone. Terraform intentionally
+the managed A, AAAA, CNAME, and CAA records for each zone. Terraform intentionally
 starts with empty record lists so it does not invent DNS targets.

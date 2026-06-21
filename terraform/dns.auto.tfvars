@@ -7,6 +7,11 @@ dns_zones = {
         value = "164.132.48.50"
       },
       {
+        name  = ""
+        type  = "CAA"
+        value = "0 issue \"letsencrypt.org\""
+      },
+      {
         name  = "www"
         type  = "CNAME"
         value = "below.black."
@@ -20,6 +25,11 @@ dns_zones = {
         name  = ""
         type  = "A"
         value = "164.132.48.50"
+      },
+      {
+        name  = ""
+        type  = "CAA"
+        value = "0 issue \"letsencrypt.org\""
       },
       {
         name  = "www"
@@ -37,6 +47,11 @@ dns_zones = {
         value = "91.134.140.52"
       },
       {
+        name  = ""
+        type  = "CAA"
+        value = "0 issue \"letsencrypt.org\""
+      },
+      {
         name  = "www"
         type  = "CNAME"
         value = "leo.surf."
@@ -50,6 +65,11 @@ dns_zones = {
         name  = ""
         type  = "A"
         value = "91.134.140.52"
+      },
+      {
+        name  = ""
+        type  = "CAA"
+        value = "0 issue \"letsencrypt.org\""
       },
       {
         name  = "www"
