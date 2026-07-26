@@ -2,7 +2,7 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-WORKSPACE_DIR="${SCRIPT_DIR}"
+SOURCE_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 IMAGE_NAME="${INFRASTRUCTURE_IMAGE_NAME:-infrastructure:local}"
 
 "${SCRIPT_DIR}/build.sh"
@@ -15,7 +15,7 @@ docker_args=(
   -e ANSIBLE_FORCE_COLOR="${ANSIBLE_FORCE_COLOR:-true}"
   -e ANSIBLE_WWW_SOURCE_ROOT=/workspace
   -v "${SCRIPT_DIR}/ansible:/ansible:ro"
-  -v "${WORKSPACE_DIR}:/workspace:ro"
+  -v "${SOURCE_ROOT}:/workspace:ro"
 )
 
 if [[ -d "${HOME}/.ssh" ]]; then

@@ -46,6 +46,12 @@
       + (nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list)
     }}
 
+- name: Remove stale declared web content paths before copy
+  ansible.builtin.file:
+    path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') }}"
+    state: absent
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+
 - name: Deploy web content from declared site sources
   ansible.builtin.copy:
     src: "{{ www_source_root }}/{{ item.www_source | regex_replace('^/+', '') }}"

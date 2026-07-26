@@ -1,7 +1,7 @@
 ---
 nginx_html_root: /usr/share/nginx/html
 nginx_conf_dir: /etc/nginx/conf.d
-www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default(playbook_dir ~ '/..', true) }}"
+www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default('/workspace', true) }}"
 
 firewall_nftables_conf: /etc/nftables.conf
 docker_daemon_config_dir: /etc/docker

@@ -9,16 +9,22 @@ certbot_certificates:
   - name: stats.leo.surf
     domains:
       - stats.leo.surf
+  - name: estcequilfaitchaud.fr
+    domains:
+      - estcequilfaitchaud.fr
+      - www.estcequilfaitchaud.fr
 
 managed_nginx_conf_files:
   - default.conf
   - leo.surf.conf
   - stats.leo.surf.conf
+  - estcequilfaitchaud.fr.conf
 
 nginx_required_directories:
   - "{{ nginx_conf_dir }}"
   - "{{ nginx_html_root }}"
   - "{{ nginx_html_root }}/leo.surf"
+  - "{{ nginx_html_root }}/estcequilfaitchaud.fr"
   - "{{ certbot_webroot }}"
   - "{{ letsencrypt_dir }}"
   - "{{ letsencrypt_dir }}/renewal-hooks/deploy"
@@ -40,6 +46,7 @@ nginx_sites:
             cors_any_origin: true
       - names:
           - leo.surf
+          - www.leo.surf
         listen:
           - "80"
         acme_challenge: true
@@ -58,6 +65,28 @@ nginx_sites:
             upstream: http://localhost:3000/
       - names:
           - stats.leo.surf
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+  - name: estcequilfaitchaud.fr
+    output: estcequilfaitchaud.fr.conf
+    www_source: estcequilfaitchaud.fr/index.html
+    www_dest: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"
+    servers:
+      - names:
+          - estcequilfaitchaud.fr
+          - www.estcequilfaitchaud.fr
+        ssl:
+          cert_name: estcequilfaitchaud.fr
+          include_options: false
+        locations:
+          - path: /
+            root: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"
+      - names:
+          - estcequilfaitchaud.fr
+          - www.estcequilfaitchaud.fr
         listen:
           - "80"
         acme_challenge: true
