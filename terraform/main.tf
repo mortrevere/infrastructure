@@ -1,4 +1,6 @@
 locals {
+  dns_record_types_with_fqdn_targets = ["CNAME", "MX", "SRV"]
+
   dns_records = flatten([
     for zone_name, zone in var.dns_zones : [
       for record in zone.records : {
@@ -21,6 +23,10 @@ resource "ovh_domain_zone_record" "records" {
   zone      = each.value.zone
   subdomain = each.value.name
   fieldtype = each.value.type
-  target    = each.value.type == "CNAME" && !endswith(each.value.value, ".") ? "${each.value.value}." : each.value.value
+  target = (
+    contains(local.dns_record_types_with_fqdn_targets, each.value.type) && !endswith(each.value.value, ".")
+    ? "${each.value.value}."
+    : each.value.value
+  )
   ttl       = each.value.ttl
 }
