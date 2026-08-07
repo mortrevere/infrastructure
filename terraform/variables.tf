@@ -15,20 +15,7 @@ variable "dns_zones" {
     }))
   }))
 
-  default = {
-    "below.black" = {
-      records = []
-    }
-    "below.industries" = {
-      records = []
-    }
-    "leo.surf" = {
-      records = []
-    }
-    "yoko.cat" = {
-      records = []
-    }
-  }
+  default = {}
 
   validation {
     condition = alltrue(flatten([

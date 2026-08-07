@@ -11,20 +11,11 @@ firewall_allowed_tcp_ports:
   - 80
   - 443
 
-docker_daemon_firewall_backend: nftables
-docker_ip_forward: true
-
 jinjapocalypse_repo_url: https://github.com/mortrevere/jinjapocalypse.git
 jinjapocalypse_repo_version: HEAD
 jinjapocalypse_checkout_dir: /opt/jinjapocalypse
 jinjapocalypse_sites_root: /var/lib/jinjapocalypse-sites
 jinjapocalypse_image_name: jinjapocalypse
-jinjapocalypse_cron:
-  minute: "0"
-  hour: "*"
-  day: "*"
-  month: "*"
-  weekday: "*"
 
 umami_repo_url: https://github.com/umami-software/umami.git
 umami_repo_version: HEAD
@@ -35,4 +26,3 @@ letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"
 certbot_webroot: /var/www/letsencrypt
 certbot_email: ""
 certbot_use_staging: false
-certbot_renewal_dry_run: false

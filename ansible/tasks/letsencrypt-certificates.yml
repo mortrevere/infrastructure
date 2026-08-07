@@ -1,14 +1,4 @@
 ---
-- name: Install managed Let's Encrypt nginx SSL options when absent
-  ansible.builtin.copy:
-    dest: "{{ letsencrypt_dir }}/options-ssl-nginx.conf"
-    owner: root
-    group: root
-    mode: "0644"
-    force: false
-    content: |
-      # Managed by infrastructure; shared SSL settings live in the nginx site template.
-
 - name: Obtain missing certificates
   ansible.builtin.command:
     cmd: >-
@@ -38,7 +28,7 @@
 - name: Install nginx virtual hosts from YAML model
   ansible.builtin.template:
     src: site.conf.j2
-    dest: "{{ nginx_conf_dir }}/{{ item.output }}"
+    dest: "{{ nginx_conf_dir }}/{{ item.name }}.conf"
     owner: root
     group: root
     mode: "0644"
@@ -94,13 +84,6 @@
     enabled: true
     state: started
   when: ansible_service_mgr == "systemd"
-
-- name: Test Certbot renewal path
-  ansible.builtin.command: certbot renew --dry-run
-  changed_when: false
-  when:
-    - certbot_renewal_dry_run | bool
-    - not ansible_check_mode
 
 - name: Reproduce leo home web symlink
   ansible.builtin.file:

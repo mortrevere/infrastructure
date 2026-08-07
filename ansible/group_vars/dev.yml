@@ -14,12 +14,6 @@ certbot_certificates:
       - estcequilfaitchaud.fr
       - www.estcequilfaitchaud.fr
 
-managed_nginx_conf_files:
-  - default.conf
-  - leo.surf.conf
-  - stats.leo.surf.conf
-  - estcequilfaitchaud.fr.conf
-
 nginx_required_directories:
   - "{{ nginx_conf_dir }}"
   - "{{ nginx_html_root }}"
@@ -32,14 +26,12 @@ nginx_required_directories:
 nginx_sites:
   - name: leo.surf
     jinjapocalypse_git_source: https://github.com/mortrevere/leo.surf.git
-    output: leo.surf.conf
     servers:
       - names:
           - leo.surf
           - www.leo.surf
         ssl:
           cert_name: leo.surf
-          include_options: false
         locations:
           - path: /
             root: "{{ nginx_html_root }}/leo.surf/"
@@ -53,13 +45,11 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: stats.leo.surf
-    output: stats.leo.surf.conf
     servers:
       - names:
           - stats.leo.surf
         ssl:
           cert_name: stats.leo.surf
-          include_options: false
         proxy_locations:
           - path: /
             upstream: http://localhost:3000/
@@ -71,16 +61,13 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: estcequilfaitchaud.fr
-    output: estcequilfaitchaud.fr.conf
     www_source: estcequilfaitchaud.fr/index.html
-    www_dest: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"
     servers:
       - names:
           - estcequilfaitchaud.fr
           - www.estcequilfaitchaud.fr
         ssl:
           cert_name: estcequilfaitchaud.fr
-          include_options: false
         locations:
           - path: /
             root: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"

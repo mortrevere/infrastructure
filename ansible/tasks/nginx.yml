@@ -27,9 +27,9 @@
 
 - name: Remove obsolete and managed nginx config files before ACME bootstrap
   ansible.builtin.file:
-    path: "{{ nginx_conf_dir }}/{{ item }}"
+    path: "{{ nginx_conf_dir }}/{{ item.name }}.conf"
     state: absent
-  loop: "{{ managed_nginx_conf_files }}"
+  loop: "{{ nginx_sites }}"
   notify: Reload nginx
   when: missing_certbot_certificates | length > 0
 

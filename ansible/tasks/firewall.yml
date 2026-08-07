@@ -25,8 +25,8 @@
     mode: "0644"
     content: |
       {
-        "firewall-backend": "{{ docker_daemon_firewall_backend }}",
-        "ip-forward": {{ docker_ip_forward | bool | lower }}
+        "firewall-backend": "nftables",
+        "ip-forward": true
       }
   notify: Restart docker
 

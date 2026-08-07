@@ -13,13 +13,6 @@ certbot_certificates:
     domains:
       - leshauts.xyz
 
-managed_nginx_conf_files:
-  - default.conf
-  - below.black.conf
-  - below.industries.conf
-  - grossemer.de.conf
-  - leshauts.xyz.conf
-
 nginx_required_directories:
   - "{{ nginx_conf_dir }}"
   - "{{ nginx_html_root }}"
@@ -34,7 +27,6 @@ nginx_required_directories:
 
 nginx_sites:
   - name: grossemer.de
-    output: grossemer.de.conf
     servers:
       - names:
           - grossemer.de
@@ -45,13 +37,11 @@ nginx_sites:
 
   - name: below.industries
     jinjapocalypse_git_source: https://github.com/beLow-Industries/below.industries.git
-    output: below.industries.conf
     servers:
       - names:
           - below.industries
         ssl:
           cert_name: below.industries
-          include_options: false
         locations:
           - path: /
             root: "{{ nginx_html_root }}/below.industries/"
@@ -65,13 +55,11 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: leshauts.xyz
-    output: leshauts.xyz.conf
     servers:
       - names:
           - leshauts.xyz
         ssl:
           cert_name: leshauts.xyz
-          include_options: true
         locations:
           - path: /hydrologie/
             root: "{{ nginx_html_root }}"
@@ -87,7 +75,6 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: below.black
-    output: below.black.conf
     servers:
       - names:
           - below.black
@@ -95,7 +82,6 @@ nginx_sites:
         no_cache: true
         ssl:
           cert_name: below.black
-          include_options: true
         proxy_locations:
           - path: /api/
             upstream: http://localhost:8000/api/
@@ -107,7 +93,6 @@ nginx_sites:
         return_directive: "301 https://below.black$request_uri"
         ssl:
           cert_name: below.black
-          include_options: true
 
       - names:
           - below.black

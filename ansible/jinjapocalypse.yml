@@ -81,10 +81,6 @@
   ansible.builtin.cron:
     name: "jinjapocalypse rebuild {{ item.name }}"
     user: root
-    minute: "{{ (item.jinjapocalypse_cron | default({})).get('minute', jinjapocalypse_cron.minute) }}"
-    hour: "{{ (item.jinjapocalypse_cron | default({})).get('hour', jinjapocalypse_cron.hour) }}"
-    day: "{{ (item.jinjapocalypse_cron | default({})).get('day', jinjapocalypse_cron.day) }}"
-    month: "{{ (item.jinjapocalypse_cron | default({})).get('month', jinjapocalypse_cron.month) }}"
-    weekday: "{{ (item.jinjapocalypse_cron | default({})).get('weekday', jinjapocalypse_cron.weekday) }}"
+    special_time: hourly
     job: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh >/var/log/jinjapocalypse-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.log 2>&1"
   loop: "{{ nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list }}"
