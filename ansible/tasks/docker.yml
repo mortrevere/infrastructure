@@ -3,6 +3,7 @@
   ansible.builtin.apt:
     name:
       - ca-certificates
+      - curl
       - gnupg
     state: present
     update_cache: true
@@ -16,10 +17,29 @@
     group: root
     mode: "0755"
 
+- name: Check Docker apt repository signing key
+  ansible.builtin.stat:
+    path: /etc/apt/keyrings/docker.asc
+  register: docker_apt_signing_key
+
 - name: Download Docker apt repository signing key
-  ansible.builtin.get_url:
-    url: https://download.docker.com/linux/debian/gpg
-    dest: /etc/apt/keyrings/docker.asc
+  ansible.builtin.command:
+    argv:
+      - curl
+      - --fail
+      - --silent
+      - --show-error
+      - --location
+      - --output
+      - /etc/apt/keyrings/docker.asc
+      - https://download.docker.com/linux/debian/gpg
+  changed_when: true
+  when: not docker_apt_signing_key.stat.exists
+
+- name: Set Docker apt repository signing key permissions
+  ansible.builtin.file:
+    path: /etc/apt/keyrings/docker.asc
+    state: file
     owner: root
     group: root
     mode: "0644"
