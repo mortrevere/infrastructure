@@ -1,7 +1,18 @@
 ---
-home_web_symlink_owner: leo
+home_web_symlink_owner: debian
 
 certbot_certificates:
+  - name: leo.surf
+    domains:
+      - leo.surf
+      - www.leo.surf
+  - name: stats.leo.surf
+    domains:
+      - stats.leo.surf
+  - name: estcequilfaitchaud.fr
+    domains:
+      - estcequilfaitchaud.fr
+      - www.estcequilfaitchaud.fr
   - name: below.black
     domains:
       - below.black
@@ -16,24 +27,71 @@ certbot_certificates:
 nginx_required_directories:
   - "{{ nginx_conf_dir }}"
   - "{{ nginx_html_root }}"
-  - "{{ nginx_html_root }}/mer.de/grossemer.de"
+  - "{{ nginx_html_root }}/leo.surf"
+  - "{{ nginx_html_root }}/estcequilfaitchaud.fr"
   - "{{ nginx_html_root }}/below.industries"
-  - "{{ nginx_html_root }}/romejko/build"
-  - "{{ nginx_html_root }}/hydrologie"
   - "{{ nginx_html_root }}/below.black"
+  - "{{ nginx_html_root }}/leshauts.xyz"
   - "{{ certbot_webroot }}"
   - "{{ letsencrypt_dir }}"
   - "{{ letsencrypt_dir }}/renewal-hooks/deploy"
 
 nginx_sites:
-  - name: grossemer.de
+  - name: leo.surf
+    jinjapocalypse_git_source: https://github.com/mortrevere/leo.surf.git
     servers:
       - names:
-          - grossemer.de
+          - leo.surf
+          - www.leo.surf
+        ssl:
+          cert_name: leo.surf
         locations:
           - path: /
-            root: "{{ nginx_html_root }}/mer.de/grossemer.de/"
+            root: "{{ nginx_html_root }}/leo.surf/"
             cors_any_origin: true
+      - names:
+          - leo.surf
+          - www.leo.surf
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+  - name: stats.leo.surf
+    servers:
+      - names:
+          - stats.leo.surf
+        ssl:
+          cert_name: stats.leo.surf
+        proxy_locations:
+          - path: /
+            upstream: http://localhost:3000/
+      - names:
+          - stats.leo.surf
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
+
+  - name: estcequilfaitchaud.fr
+    www_source: estcequilfaitchaud.fr/index.html
+    servers:
+      - names:
+          - estcequilfaitchaud.fr
+          - www.estcequilfaitchaud.fr
+        ssl:
+          cert_name: estcequilfaitchaud.fr
+        locations:
+          - path: /
+            root: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"
+            cors_any_origin: true
+      - names:
+          - estcequilfaitchaud.fr
+          - www.estcequilfaitchaud.fr
+        listen:
+          - "80"
+        acme_challenge: true
+        redirect_to_https: "https://$host$request_uri"
 
   - name: below.industries
     jinjapocalypse_git_source: https://github.com/beLow-Industries/below.industries.git
@@ -55,6 +113,9 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: leshauts.xyz
+    www_source: leshauts.xyz/
+    www_dest: "{{ nginx_html_root }}/leshauts.xyz/"
+    www_deploy_strategy: rsync_checksum
     servers:
       - names:
           - leshauts.xyz
@@ -62,9 +123,9 @@ nginx_sites:
           cert_name: leshauts.xyz
         locations:
           - path: /hydrologie/
-            root: "{{ nginx_html_root }}"
+            root: "{{ nginx_html_root }}/leshauts.xyz"
           - path: /
-            root: "{{ nginx_html_root }}/romejko/build"
+            root: "{{ nginx_html_root }}/leshauts.xyz/romejko/build"
         error_pages: true
 
       - names:
@@ -75,21 +136,20 @@ nginx_sites:
         redirect_to_https: "https://$host$request_uri"
 
   - name: below.black
+    jinjapocalypse_git_source: https://github.com/mortrevere/below.black.git
     servers:
       - names:
           - below.black
-        root: "{{ nginx_html_root }}/below.black"
         no_cache: true
         ssl:
           cert_name: below.black
-        proxy_locations:
-          - path: /api/
-            upstream: http://localhost:8000/api/
-            cors: true
+        locations:
+          - path: /
+            root: "{{ nginx_html_root }}/below.black/"
+            cors_any_origin: true
 
       - names:
           - www.below.black
-        root: "{{ nginx_html_root }}/below.black"
         return_directive: "301 https://below.black$request_uri"
         ssl:
           cert_name: below.black
@@ -98,7 +158,6 @@ nginx_sites:
           - below.black
         listen:
           - "80"
-        root: "{{ nginx_html_root }}/below.black"
         acme_challenge: true
         redirect_to_https: "https://$host$request_uri"
 
@@ -106,6 +165,5 @@ nginx_sites:
           - www.below.black
         listen:
           - "80"
-        root: "{{ nginx_html_root }}/below.black"
         acme_challenge: true
         redirect_to_https: "https://below.black$request_uri"

@@ -28,5 +28,5 @@ resource "ovh_domain_zone_record" "records" {
     ? "${each.value.value}."
     : each.value.value
   )
-  ttl       = each.value.ttl
+  ttl = each.value.ttl
 }

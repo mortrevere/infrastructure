@@ -1,6 +1,6 @@
 ---
 - name: Manage nginx host configuration
-  hosts: "{{ target_hosts | default('dev') }}"
+  hosts: "{{ target_hosts | default('prod') }}"
   become: true
   gather_facts: true
 

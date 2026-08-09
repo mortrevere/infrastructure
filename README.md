@@ -7,7 +7,7 @@ Terraform and Ansible stacks for the servers I manage.
 - Only prerequisite is `docker`: one image provides both Terraform and Ansible, so I'm not dependant on the local setup 
 - As automated as possible: covers everything, no manual intervention, idempotency
 - Should work on slow/unstable connections: remote server does the work
-- Ansible uses SSH agent forwarding and `~/.ssh`, and the default target group is `dev`.
+- Ansible uses SSH agent forwarding and `~/.ssh`, and the default target group is `prod`.
 
 ## Ansible
 
@@ -46,5 +46,4 @@ Then run Terraform:
 ```bash
 ./terraform.sh && ./ansible.sh
 ```
-
 

@@ -2,6 +2,7 @@
 nginx_html_root: /usr/share/nginx/html
 nginx_conf_dir: /etc/nginx/conf.d
 www_source_root: "{{ lookup('ansible.builtin.env', 'ANSIBLE_WWW_SOURCE_ROOT') | default('/workspace', true) }}"
+www_rsync_staging_root: /tmp/infrastructure-www-sync
 
 firewall_nftables_conf: /etc/nftables.conf
 docker_daemon_config_dir: /etc/docker

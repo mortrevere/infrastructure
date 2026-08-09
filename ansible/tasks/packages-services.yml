@@ -14,6 +14,7 @@
       - cron
       - nftables
       - git
+      - rsync
     state: present
     update_cache: true
     cache_valid_time: 3600
@@ -51,6 +52,7 @@
     path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') }}"
     state: absent
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+  when: item.www_deploy_strategy | default('copy') == 'copy'
 
 - name: Deploy web content from declared site sources
   ansible.builtin.copy:
@@ -61,6 +63,66 @@
     mode: preserve
     directory_mode: "0755"
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+  when: item.www_deploy_strategy | default('copy') == 'copy'
+
+- name: Ensure checksum web content staging directories exist
+  ansible.builtin.file:
+    path: "{{ www_rsync_staging_root }}/{{ item.name }}"
+    state: directory
+    owner: "{{ ansible_user | default(omit) }}"
+    mode: "0755"
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+  when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
+
+- name: Stage web content from declared site sources with checksums
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'rsync',
+          '-a',
+          '--checksum',
+          '--delete',
+          '--itemize-changes',
+          '-e',
+          'ssh -p ' ~ (ansible_port | default(22) | string)
+        ]
+        + (ansible_check_mode | ternary(['--dry-run'], []))
+        + [
+          www_source_root ~ '/' ~ (item.www_source | regex_replace('^/+', '') | regex_replace('/?$', '/')),
+          (ansible_user | default(lookup('ansible.builtin.env', 'USER'), true)) ~ '@' ~ (ansible_host | default(inventory_hostname)) ~ ':' ~ www_rsync_staging_root ~ '/' ~ item.name ~ '/'
+        ]
+      }}
+  register: rsync_www_stage
+  changed_when: rsync_www_stage.stdout | length > 0
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+  delegate_to: localhost
+  become: false
+  when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
+
+- name: Deploy staged web content with checksums
+  ansible.builtin.command:
+    argv: >-
+      {{
+        [
+          'rsync',
+          '-a',
+          '--checksum',
+          '--delete',
+          '--itemize-changes',
+          '--chown=root:root',
+          '--chmod=D755'
+        ]
+        + (ansible_check_mode | ternary(['--dry-run'], []))
+        + [
+          www_rsync_staging_root ~ '/' ~ item.name ~ '/',
+          item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') | regex_replace('/?$', '/')
+        ]
+      }}
+  register: rsync_www_deploy
+  changed_when: rsync_www_deploy.stdout | length > 0
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+  when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
 
 - name: Configure Jinjapocalypse git-backed sites
   ansible.builtin.include_tasks: "{{ playbook_dir }}/jinjapocalypse.yml"
