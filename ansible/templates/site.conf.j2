@@ -28,7 +28,11 @@ server {
 {% for location in server.locations | default([]) %}
 
     location {{ location.path }} {
+{% if location.alias is defined %}
+        alias  {{ location.alias }};
+{% else %}
         root   {{ location.root }};
+{% endif %}
         index  {{ location.index | default('index.html index.htm') }};
         add_header Strict-Transport-Security "max-age=31536000" always;
 {% if location.cors_any_origin | default(false) %}

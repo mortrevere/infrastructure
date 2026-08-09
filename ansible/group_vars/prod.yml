@@ -124,8 +124,10 @@ nginx_sites:
         locations:
           - path: /hydrologie/
             root: "{{ nginx_html_root }}/leshauts.xyz"
+          - path: /romejko/
+            alias: "{{ nginx_html_root }}/leshauts.xyz/romejko/build/"
           - path: /
-            root: "{{ nginx_html_root }}/leshauts.xyz/romejko/build"
+            root: "{{ nginx_html_root }}/leshauts.xyz"
         error_pages: true
 
       - names:
