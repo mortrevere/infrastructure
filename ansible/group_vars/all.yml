@@ -11,6 +11,10 @@ firewall_allowed_tcp_ports:
   - 22
   - 80
   - 443
+firewall_allowed_udp_ports: []
+
+wireguard_enabled: false
+wireguard_listen_port: 33333
 
 jinjapocalypse_repo_url: https://github.com/mortrevere/jinjapocalypse.git
 jinjapocalypse_repo_version: HEAD

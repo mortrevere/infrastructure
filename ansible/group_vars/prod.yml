@@ -1,6 +1,11 @@
 ---
 home_web_symlink_owner: debian
 
+firewall_allowed_udp_ports:
+  - "{{ wireguard_listen_port }}"
+
+wireguard_enabled: true
+
 certbot_certificates:
   - name: leo.surf
     domains:

@@ -13,6 +13,10 @@
 
     - name: Manage packages and services
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/packages-services.yml"
+
+    - name: Manage WireGuard
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/wireguard.yml"
+      when: wireguard_enabled | bool
       
     - name: Flush nftables reload before continuing
       ansible.builtin.meta: flush_handlers
@@ -55,3 +59,12 @@
       ansible.builtin.command: sysctl --system
       changed_when: false
       listen: Reload sysctl
+
+- name: Manage node_exporter
+  hosts: "{{ node_exporter_hosts | default('prod:house') }}"
+  become: true
+  gather_facts: true
+
+  tasks:
+    - name: Install node_exporter
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/node-exporter.yml"

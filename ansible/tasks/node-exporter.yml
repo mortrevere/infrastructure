@@ -1,0 +1,19 @@
+---
+- name: Require Debian-family host
+  ansible.builtin.assert:
+    that:
+      - ansible_os_family == "Debian"
+    fail_msg: This task targets Debian-family hosts.
+
+- name: Install node_exporter package
+  ansible.builtin.apt:
+    name: prometheus-node-exporter
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure node_exporter service is enabled and running
+  ansible.builtin.service:
+    name: prometheus-node-exporter
+    enabled: true
+    state: started
