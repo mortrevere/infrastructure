@@ -88,6 +88,41 @@ dns_zones = {
         value = "91.134.140.52"
       },
       {
+        name  = "house"
+        type  = "A"
+        value = "100.64.88.3"
+      },
+      {
+        name  = "*.house"
+        type  = "A"
+        value = "100.64.88.3"
+      },
+      {
+        name  = "blue.house"
+        type  = "A"
+        value = "100.64.88.4"
+      },
+      {
+        name  = "atv.house"
+        type  = "A"
+        value = "100.64.88.4"
+      },
+      {
+        name  = "cinema.house"
+        type  = "A"
+        value = "100.64.88.4"
+      },
+      {
+        name  = "transmission.house"
+        type  = "A"
+        value = "100.64.88.4"
+      },
+      {
+        name  = "blue-files.house"
+        type  = "A"
+        value = "100.64.88.4"
+      },
+      {
         name  = ""
         type  = "CAA"
         value = "0 issue \"letsencrypt.org\""
