@@ -13,6 +13,9 @@ table inet filter {
 {% for port in firewall_allowed_udp_ports | default([]) | unique | sort %}
         udp dport {{ port }} accept
 {% endfor %}
+{% for rule in firewall_extra_input_rules | default([]) %}
+        {{ rule }}
+{% endfor %}
     }
 
     chain output {

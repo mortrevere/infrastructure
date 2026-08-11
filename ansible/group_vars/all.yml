@@ -12,6 +12,7 @@ firewall_allowed_tcp_ports:
   - 80
   - 443
 firewall_allowed_udp_ports: []
+firewall_extra_input_rules: []
 
 wireguard_enabled: false
 wireguard_listen_port: 33333

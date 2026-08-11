@@ -7,7 +7,9 @@
     group: root
     mode: "0644"
     validate: "nft -c -f %s"
-  notify: Restart nftables
+  notify:
+    - Restart nftables
+    - Restart docker
 
 - name: Ensure Docker daemon configuration directory exists
   ansible.builtin.file:

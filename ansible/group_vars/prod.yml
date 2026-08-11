@@ -3,6 +3,8 @@ home_web_symlink_owner: debian
 
 firewall_allowed_udp_ports:
   - "{{ wireguard_listen_port }}"
+firewall_extra_input_rules:
+  - iif "wg0" tcp dport 9100 ip saddr 100.64.88.0/24 accept
 
 wireguard_enabled: true
 
