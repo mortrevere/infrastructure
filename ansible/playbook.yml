@@ -1,54 +1,54 @@
 ---
-- name: Manage nginx host configuration
+- name: Manage infrastructure hosts
   hosts: "{{ target_hosts | default('prod') }}"
   become: true
   gather_facts: true
 
+  pre_tasks:
+    - name: Require Debian-family host
+      ansible.builtin.assert:
+        that:
+          - ansible_os_family == "Debian"
+        fail_msg: This stack targets Debian-family hosts.
+      tags: [always]
+
   tasks:
     - name: Harden SSH, nginx, and service logging
-      ansible.builtin.include_tasks:
-        file: "{{ playbook_dir }}/tasks/security.yml"
-        apply:
-          tags: [security, hardening]
+      ansible.builtin.import_tasks: tasks/security.yml
       tags: [security, hardening]
 
-    - name: Install Docker from Docker's apt repository
-      ansible.builtin.include_tasks:
-        file: "{{ playbook_dir }}/tasks/docker.yml"
-        apply:
-          tags: [docker]
+    - name: Manage Docker
+      ansible.builtin.import_tasks: tasks/docker.yml
       tags: [docker]
 
     - name: Manage nftables firewall
-      ansible.builtin.include_tasks:
-        file: "{{ playbook_dir }}/tasks/firewall.yml"
-        apply:
-          tags: [firewall, hardening]
+      ansible.builtin.import_tasks: tasks/firewall.yml
       tags: [firewall, hardening]
 
-    - name: Manage packages and services
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/packages-services.yml"
-
     - name: Manage WireGuard
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/wireguard.yml"
+      ansible.builtin.import_tasks: tasks/wireguard.yml
       when: wireguard_enabled | bool
-      
-    - name: Flush nftables reload before continuing
+      tags: [wireguard]
+
+    - name: Apply host configuration before deploying services
       ansible.builtin.meta: flush_handlers
       tags: [always]
 
-    - name: Prepare nginx for ACME bootstrap
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/nginx.yml"
+    - name: Deploy web content
+      ansible.builtin.import_tasks: tasks/packages-services.yml
+      tags: [web]
 
-    - name: Manage Let's Encrypt certificates
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/letsencrypt-certificates.yml"
+    - name: Manage nginx and certificates
+      ansible.builtin.import_tasks: tasks/nginx.yml
+      tags: [web]
 
-    - name: Install Umami
-      ansible.builtin.include_tasks:
-        file: "{{ playbook_dir }}/tasks/umami.yml"
-        apply:
-          tags: [umami]
+    - name: Manage Umami
+      ansible.builtin.import_tasks: tasks/umami.yml
       tags: [umami]
+
+    - name: Manage node_exporter
+      ansible.builtin.import_tasks: tasks/node-exporter.yml
+      tags: [node-exporter]
 
   handlers:
     - name: Validate nginx
@@ -79,24 +79,14 @@
         state: reloaded
       listen: Reload SSH
 
+    - name: Reload sysctl settings
+      ansible.builtin.command: sysctl --system
+      changed_when: false
+      listen: Reload sysctl
+
     - name: Restart docker service
       ansible.builtin.service:
         name: docker
         state: restarted
       when: not ansible_check_mode
       listen: Restart docker
-
-    - name: Reload sysctl settings
-      ansible.builtin.command: sysctl --system
-      changed_when: false
-      listen: Reload sysctl
-
-- name: Manage node_exporter
-  hosts: "{{ node_exporter_hosts | default('prod:house') }}"
-  become: true
-  gather_facts: true
-  tags: [node-exporter]
-
-  tasks:
-    - name: Install node_exporter
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/node-exporter.yml"

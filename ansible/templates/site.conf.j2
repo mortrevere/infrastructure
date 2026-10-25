@@ -1,104 +1,84 @@
-{% for server in item.servers %}
 server {
+    listen 80;
+    server_name {{ site.name }}{% if site.www | default(true) %} www.{{ site.name }}{% endif %};
     include /etc/nginx/snippets/infrastructure-security.conf;
-{% for listen in server.listen | default([]) %}
-    listen {{ listen }};
-{% endfor %}
-{% if server.ssl is defined %}
-    listen 443 ssl;
-{% endif %}
-    server_name {{ server.names | join(' ') }};
     add_header Access-Control-Allow-Origin "https://leo.surf" always;
-{% if server.root is defined %}
-    root {{ server.root }};
-{% endif %}
-{% if server.no_cache | default(false) %}
-
-    add_header Last-Modified $date_gmt;
-    add_header Cache-Control 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0';
-    if_modified_since off;
-    expires off;
-    etag off;
-{% endif %}
-{% if server.acme_challenge | default(false) %}
 
     location ^~ /.well-known/acme-challenge/ {
         root {{ certbot_webroot }};
         default_type text/plain;
     }
-{% endif %}
-{% for location in server.locations | default([]) %}
 
-    location {{ location.path }} {
-{% if location.alias is defined %}
-        alias  {{ location.alias }};
-{% else %}
-        root   {{ location.root }};
-{% endif %}
-        index  {{ location.index | default('index.html index.htm') }};
-        add_header Strict-Transport-Security "max-age=31536000" always;
-        add_header Access-Control-Allow-Origin "https://leo.surf" always;
+    location / {
+        return 301 https://{{ site.name }}$request_uri;
     }
-{% endfor %}
-{% for proxy in server.proxy_locations | default([]) %}
+}
+{% if tls_enabled | default(true) %}
 
-    location{% if proxy.exact | default(false) %} ={% endif %} {{ proxy.path }} {
-        add_header Access-Control-Allow-Origin "https://leo.surf" always;
-{% if proxy.redirect_to is defined %}
-        return {{ proxy.redirect_code | default(301) }} {{ proxy.redirect_to }};
-{% else %}
-        add_header Strict-Transport-Security "max-age=31536000" always;
-{% if proxy.cors | default(false) %}
-        add_header 'Access-Control-Allow-Credentials' 'true';
-        add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,token';
-        add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
-{% endif %}
+server {
+    listen 443 ssl;
+    server_name {{ site.name }};
+    include /etc/nginx/snippets/infrastructure-security.conf;
+    include /etc/nginx/snippets/infrastructure-tls.conf;
+    ssl_certificate {{ letsencrypt_live_dir }}/{{ site.name }}/fullchain.pem;
+    ssl_certificate_key {{ letsencrypt_live_dir }}/{{ site.name }}/privkey.pem;
+    ssl_trusted_certificate {{ letsencrypt_live_dir }}/{{ site.name }}/chain.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+{% if site.upstream is defined %}
+
+    location / {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_redirect off;
-        proxy_hide_header Access-Control-Allow-Origin;
-        proxy_pass {{ proxy.upstream }};
+        proxy_pass {{ site.upstream }};
+    }
+{% else %}
+    root {{ nginx_html_root }}/{{ site.name }};
+    index index.html index.htm;
+    add_header Access-Control-Allow-Origin "https://leo.surf" always;
+    add_header Access-Control-Allow-Methods "GET, HEAD, OPTIONS" always;
+    add_header Access-Control-Allow-Headers $http_access_control_request_headers always;
+
+    if ($request_method = OPTIONS) {
+        return 204;
+    }
+{% if site.no_cache | default(false) %}
+
+    add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0" always;
+    if_modified_since off;
+    expires off;
+    etag off;
 {% endif %}
+{% for location in site.locations | default([]) %}
+
+    location {{ location.path }} {
+        alias {{ location.alias }};
     }
 {% endfor %}
-{% if server.redirect_to_https is defined %}
+{% if site.error_pages | default(false) %}
 
-    location / {
-        return 301 {{ server.redirect_to_https }};
-    }
-{% endif %}
-{% if server.return_directive is defined %}
-
-    return {{ server.return_directive }};
-{% endif %}
-{% if server.error_pages | default(false) %}
-
-    error_page   500 502 503 504  /50x.html;
+    error_page 500 502 503 504 /50x.html;
     location = /50x.html {
-        root   {{ nginx_html_root }};
+        root {{ nginx_html_root }};
     }
 {% endif %}
-{% if server.ssl is defined %}
-
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_ciphers ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384:ECDHE-ECDSA-CHACHA20-POLY1305:ECDHE-RSA-CHACHA20-POLY1305;
-    ssl_conf_command Ciphersuites TLS_AES_128_GCM_SHA256:TLS_AES_256_GCM_SHA384:TLS_CHACHA20_POLY1305_SHA256;
-    ssl_session_cache shared:le_nginx_SSL:10m;
-    ssl_session_timeout 1440m;
-    ssl_session_tickets off;
-    ssl_prefer_server_ciphers on;
-    ssl_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/fullchain.pem;
-    ssl_certificate_key {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/privkey.pem;
-    add_header Strict-Transport-Security "max-age=31536000" always;
-    ssl_trusted_certificate {{ letsencrypt_live_dir }}/{{ server.ssl.cert_name }}/chain.pem;
-    resolver 1.1.1.1 1.0.0.1 valid=300s ipv6=off;
-    resolver_timeout 5s;
-    ssl_stapling on;
-    ssl_stapling_verify on;
 {% endif %}
 }
+{% if site.www | default(true) %}
 
-{% endfor %}
+server {
+    listen 443 ssl;
+    server_name www.{{ site.name }};
+    include /etc/nginx/snippets/infrastructure-tls.conf;
+    ssl_certificate {{ letsencrypt_live_dir }}/{{ site.name }}/fullchain.pem;
+    ssl_certificate_key {{ letsencrypt_live_dir }}/{{ site.name }}/privkey.pem;
+    ssl_trusted_certificate {{ letsencrypt_live_dir }}/{{ site.name }}/chain.pem;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    add_header Access-Control-Allow-Origin "https://leo.surf" always;
+    return 301 https://{{ site.name }}$request_uri;
+}
+{% endif %}
+{% endif %}

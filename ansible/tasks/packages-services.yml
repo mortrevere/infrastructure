@@ -1,10 +1,4 @@
 ---
-- name: Require Debian-family host
-  ansible.builtin.assert:
-    that:
-      - ansible_os_family == "Debian"
-    fail_msg: This playbook targets Debian-family nginx hosts.
-
 - name: Install nginx and certbot packages
   ansible.builtin.apt:
     name:
@@ -12,7 +6,6 @@
       - certbot
       - openssl
       - cron
-      - nftables
       - git
       - rsync
     state: present
@@ -32,7 +25,12 @@
     owner: root
     group: root
     mode: "0755"
-  loop: "{{ nginx_required_directories }}"
+  loop:
+    - "{{ nginx_conf_dir }}"
+    - /etc/nginx/snippets
+    - "{{ nginx_html_root }}"
+    - "{{ certbot_webroot }}"
+    - "{{ letsencrypt_dir }}/renewal-hooks/deploy"
 
 - name: Ensure web content target directories exist
   ansible.builtin.file:
@@ -75,30 +73,17 @@
   when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
 
 - name: Stage web content from declared site sources with checksums
-  ansible.builtin.command:
-    argv: >-
-      {{
-        [
-          'rsync',
-          '-a',
-          '--checksum',
-          '--delete',
-          '--delete-excluded',
-          '--exclude=.git',
-          '--itemize-changes',
-          '-e',
-          'ssh -p ' ~ (ansible_port | default(22) | string) ~ ' -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-        ]
-        + (ansible_check_mode | ternary(['--dry-run'], []))
-        + [
-          www_source_root ~ '/' ~ (item.www_source | regex_replace('^/+', '') | regex_replace('/?$', '/')),
-          (ansible_user | default(lookup('ansible.builtin.env', 'USER'), true)) ~ '@' ~ (ansible_host | default(inventory_hostname)) ~ ':' ~ www_rsync_staging_root ~ '/' ~ item.name ~ '/'
-        ]
-      }}
-  register: rsync_www_stage
-  changed_when: rsync_www_stage.stdout | length > 0
+  ansible.posix.synchronize:
+    src: "{{ www_source_root }}/{{ item.www_source | regex_replace('^/+', '') | regex_replace('/?$', '/') }}"
+    dest: "{{ www_rsync_staging_root }}/{{ item.name }}/"
+    checksum: true
+    delete: true
+    use_ssh_args: true
+    delay_updates: false
+    rsync_opts:
+      - --delete-excluded
+      - --exclude=.git
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
-  delegate_to: localhost
   become: false
   when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
 
@@ -123,10 +108,20 @@
           item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') | regex_replace('/?$', '/')
         ]
       }}
+  check_mode: false
   register: rsync_www_deploy
   changed_when: rsync_www_deploy.stdout | length > 0
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
   when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
 
 - name: Configure Jinjapocalypse git-backed sites
-  ansible.builtin.include_tasks: "{{ playbook_dir }}/jinjapocalypse.yml"
+  ansible.builtin.import_tasks: "{{ playbook_dir }}/jinjapocalypse.yml"
+
+- name: Reproduce leo home web symlink
+  ansible.builtin.file:
+    src: "{{ nginx_html_root }}"
+    dest: "/home/{{ home_web_symlink_owner }}/www"
+    state: link
+    owner: root
+    group: root
+    follow: false

@@ -49,23 +49,6 @@
       }
   notify: Reload nginx
 
-- name: Check certificates before refreshing existing nginx sites
-  ansible.builtin.stat:
-    path: "{{ letsencrypt_live_dir }}/{{ item.name }}/fullchain.pem"
-  loop: "{{ certbot_certificates }}"
-  register: security_certificate_stats
-
-- name: Apply nginx protection to existing sites
-  ansible.builtin.template:
-    src: site.conf.j2
-    dest: "{{ nginx_conf_dir }}/{{ item.name }}.conf"
-    owner: root
-    group: root
-    mode: "0644"
-  loop: "{{ nginx_sites }}"
-  when: security_certificate_stats.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
-  notify: Reload nginx
-
 - name: Remove deployed version control metadata
   ansible.builtin.file:
     path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name) | regex_replace('/+$', '') }}/.git"

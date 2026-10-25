@@ -75,6 +75,13 @@
   changed_when: "'Pull complete' in umami_pull.stderr or 'Downloaded newer image' in umami_pull.stderr"
   when: not ansible_check_mode
 
+- name: Start the existing database before checking authentication
+  ansible.builtin.command:
+    argv: [docker, compose, --project-name, umami, --env-file, "{{ umami_config_dir }}/umami.env", --file, "{{ umami_config_dir }}/compose.yml", up, --detach, --wait, --wait-timeout, "180", db]
+  register: umami_database
+  changed_when: "umami_database.stderr is search('(?i)creating|created|recreating|recreated|starting|started')"
+  when: not ansible_check_mode
+
 - name: Check whether the existing database already uses the managed password
   ansible.builtin.command:
     argv:
