@@ -8,8 +8,32 @@
     mode: "0644"
     validate: "nft -c -f %s"
   notify:
-    - Restart nftables
-    - Restart docker
+    - Reload nftables
+
+- name: Ensure nftables service override directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/nftables.service.d
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Keep nftables stop from deleting Docker's firewall tables
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/nftables.service.d/infrastructure.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      [Service]
+      ExecStop=
+      ExecStop=/usr/sbin/nft destroy table inet filter
+  register: nftables_service_override
+
+- name: Reload systemd after changing nftables service
+  ansible.builtin.systemd:
+    daemon_reload: true
+  when: nftables_service_override.changed
 
 - name: Ensure Docker daemon configuration directory exists
   ansible.builtin.file:

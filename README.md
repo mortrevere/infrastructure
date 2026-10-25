@@ -17,6 +17,24 @@ Terraform and Ansible stacks for the servers I manage.
 ./ansible.sh -e target_hosts=prod --ask-become-pass
 ```
 
+Apply host hardening without rebuilding websites or upgrading Docker:
+
+```bash
+./ansible.sh --limit vps-prod --tags hardening
+./ansible.sh --limit vps-prod --tags umami
+```
+
+`security` and `firewall` can also be applied separately. Firewall reloads replace
+only the host policy and preserve Docker's tables. Public SSH requires keys;
+WireGuard peer routing and VPN-only metrics remain available.
+
+Umami uses `/etc/umami/compose.yml`, with pinned images and root-only persistent
+secrets in `/etc/umami/secrets.json` and `/etc/umami/umami.env`. It requires the
+existing `umami_umami-db-data` volume and never creates a replacement database.
+Use the managed Compose file rather than `/opt/umami/docker-compose.yml`.
+Back up the database before changing the pinned image: application upgrades can
+run schema migrations. Changing the application secret invalidates existing sessions.
+
 ## Terraform
 
 Only manages OVH DNS zones for now. TF state is in a S3 bucket. 

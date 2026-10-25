@@ -1,19 +1,117 @@
 ---
-- name: Clone Umami on target host
-  ansible.builtin.git:
-    repo: "{{ umami_repo_url }}"
-    dest: "{{ umami_checkout_dir }}"
-    version: "{{ umami_repo_version }}"
-    update: true
-  register: umami_checkout
+- name: Ensure private Umami configuration directory exists
+  ansible.builtin.file:
+    path: "{{ umami_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+- name: Generate persistent independent Umami secrets once
+  ansible.builtin.command:
+    argv:
+      - python3
+      - -c
+      - |
+        import json, os, secrets, sys
+        fd = os.open(sys.argv[1], os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, 'w') as f:
+            json.dump({k: secrets.token_hex(32) for k in
+                       ('APP_SECRET', 'TWO_FACTOR_ENCRYPTION_KEY', 'POSTGRES_PASSWORD')}, f)
+      - "{{ umami_config_dir }}/secrets.json"
+    creates: "{{ umami_config_dir }}/secrets.json"
+  no_log: true
+
+- name: Read persistent Umami secrets
+  ansible.builtin.slurp:
+    src: "{{ umami_config_dir }}/secrets.json"
+  register: umami_secrets_file
+  no_log: true
   when: not ansible_check_mode
 
-- name: Run Umami docker compose stack
+- name: Decode Umami secrets
+  ansible.builtin.set_fact:
+    umami_secrets: "{{ umami_secrets_file.content | b64decode | from_json }}"
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Validate stored secrets before changing database authentication
+  ansible.builtin.assert:
+    that:
+      - umami_secrets[item] is match('^[0-9a-f]{64}$')
+    quiet: true
+  loop: [APP_SECRET, TWO_FACTOR_ENCRYPTION_KEY, POSTGRES_PASSWORD]
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Install private Umami environment
+  ansible.builtin.template:
+    src: umami.env.j2
+    dest: "{{ umami_config_dir }}/umami.env"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Preserve the existing database volume
   ansible.builtin.command:
-    cmd: docker compose up -d --remove-orphans
-    chdir: "{{ umami_checkout_dir }}"
+    argv: [docker, volume, inspect, "{{ umami_database_volume }}"]
+  changed_when: false
+  check_mode: false
+
+- name: Install managed Umami Compose configuration
+  ansible.builtin.template:
+    src: umami-compose.yml.j2
+    dest: "{{ umami_config_dir }}/compose.yml"
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Pull the explicitly selected Umami images
+  ansible.builtin.command:
+    argv: [docker, compose, --project-name, umami, --env-file, "{{ umami_config_dir }}/umami.env", --file, "{{ umami_config_dir }}/compose.yml", pull, --policy, missing]
+  register: umami_pull
+  changed_when: "'Pull complete' in umami_pull.stderr or 'Downloaded newer image' in umami_pull.stderr"
+  when: not ansible_check_mode
+
+- name: Check whether the existing database already uses the managed password
+  ansible.builtin.command:
+    argv:
+      - docker
+      - exec
+      - -i
+      - umami-db-1
+      - sh
+      - -c
+      # initdb trusts loopback connections; use the bridge address to test the password.
+      - 'IFS= read -r PGPASSWORD; export PGPASSWORD; exec psql -h db -U umami -d umami -Atqc "SELECT 1"'
+    stdin: "{{ umami_secrets.POSTGRES_PASSWORD }}"
+  register: umami_password_check
+  changed_when: false
+  failed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Rotate the existing PostgreSQL role without replacing its data volume
+  ansible.builtin.command:
+    argv: [docker, exec, -i, umami-db-1, psql, -U, umami, -d, umami, --set, ON_ERROR_STOP=1]
+    stdin: "ALTER ROLE umami PASSWORD '{{ umami_secrets.POSTGRES_PASSWORD }}';"
+  register: umami_password_rotation
+  no_log: true
+  when:
+    - not ansible_check_mode
+    - umami_password_check.rc != 0
+
+- name: Apply Umami and wait for both services to be healthy
+  ansible.builtin.command:
+    argv: >-
+      {{
+        ['docker', 'compose', '--project-name', 'umami', '--env-file',
+         umami_config_dir ~ '/umami.env', '--file', umami_config_dir ~ '/compose.yml', 'up']
+        + (umami_password_rotation.changed | default(false) | ternary(['--force-recreate'], []))
+        + ['--detach', '--remove-orphans', '--wait', '--wait-timeout', '180']
+      }}
   register: umami_compose
-  changed_when: >-
-    umami_checkout.changed
-    or (umami_compose.stdout is search('(?i)creating|recreating|starting|pulling|building|removing|restarted'))
+  changed_when: "umami_compose.stderr is search('(?i)creating|created|recreating|recreated|starting|started|pulling|building|removing|restarted')"
   when: not ansible_check_mode

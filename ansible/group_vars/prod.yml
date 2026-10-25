@@ -4,7 +4,9 @@ home_web_symlink_owner: debian
 firewall_allowed_udp_ports:
   - "{{ wireguard_listen_port }}"
 firewall_extra_input_rules:
-  - iif "wg0" tcp dport 9100 ip saddr 100.64.88.0/24 accept
+  - iifname "wg0" tcp dport 9100 ip saddr 100.64.88.0/24 accept
+firewall_extra_forward_rules:
+  - iifname "wg0" oifname "wg0" ip saddr 100.64.88.0/24 ip daddr 100.64.88.0/24 accept
 
 wireguard_enabled: true
 
@@ -72,7 +74,7 @@ nginx_sites:
           cert_name: stats.leo.surf
         proxy_locations:
           - path: /
-            upstream: http://localhost:3000/
+            upstream: http://127.0.0.1:3000/
       - names:
           - stats.leo.surf
         listen:

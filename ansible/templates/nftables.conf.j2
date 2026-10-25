@@ -1,11 +1,19 @@
 #!/usr/sbin/nft -f
 
+# Replace only our table, in one transaction; Docker owns its own tables.
+destroy table inet filter
+
 table inet filter {
     chain input {
         type filter hook input priority 0; policy drop;
 
-        iif "lo" accept
+        iifname "lo" accept
         ct state established,related accept
+        ct state invalid drop
+
+        ip protocol icmp accept
+        meta l4proto ipv6-icmp accept
+        iifname "{{ ansible_facts.default_ipv4.interface }}" udp sport 67 udp dport 68 accept
 
 {% for port in firewall_allowed_tcp_ports | unique | sort %}
         tcp dport {{ port }} accept
@@ -16,6 +24,19 @@ table inet filter {
 {% for rule in firewall_extra_input_rules | default([]) %}
         {{ rule }}
 {% endfor %}
+    }
+
+    chain forward {
+        type filter hook forward priority -1; policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+{% for rule in firewall_extra_forward_rules | default([]) %}
+        {{ rule }}
+{% endfor %}
+        # Docker's subsequent chains still enforce bridge isolation.
+        iifname "docker0" accept
+        iifname "br-*" accept
     }
 
     chain output {

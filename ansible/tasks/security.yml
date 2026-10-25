@@ -1,0 +1,95 @@
+---
+- name: Install host security and log rotation packages
+  ansible.builtin.apt:
+    name:
+      - nginx
+      - nftables
+      - openssh-server
+      - logrotate
+      - unattended-upgrades
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Ensure SSH and nginx snippet directories exist
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+  loop:
+    - /etc/ssh/sshd_config.d
+    - /etc/nginx/snippets
+
+- name: Enforce SSH keys before cloud-init defaults are read
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/00-infrastructure.conf
+    owner: root
+    group: root
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+    content: |
+      AuthenticationMethods publickey
+      PubkeyAuthentication yes
+      PasswordAuthentication no
+      KbdInteractiveAuthentication no
+      PermitRootLogin no
+  notify: Reload SSH
+
+- name: Deny hidden files without blocking ACME challenges
+  ansible.builtin.copy:
+    dest: /etc/nginx/snippets/infrastructure-security.conf
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      location ~ /\.(?!well-known(?:/|$)) {
+          return 404;
+      }
+  notify: Reload nginx
+
+- name: Check certificates before refreshing existing nginx sites
+  ansible.builtin.stat:
+    path: "{{ letsencrypt_live_dir }}/{{ item.name }}/fullchain.pem"
+  loop: "{{ certbot_certificates }}"
+  register: security_certificate_stats
+
+- name: Apply nginx protection to existing sites
+  ansible.builtin.template:
+    src: site.conf.j2
+    dest: "{{ nginx_conf_dir }}/{{ item.name }}.conf"
+    owner: root
+    group: root
+    mode: "0644"
+  loop: "{{ nginx_sites }}"
+  when: security_certificate_stats.results | selectattr('stat.exists', 'equalto', false) | list | length == 0
+  notify: Reload nginx
+
+- name: Remove deployed version control metadata
+  ansible.builtin.file:
+    path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name) | regex_replace('/+$', '') }}/.git"
+    state: absent
+  loop: "{{ nginx_sites }}"
+
+- name: Enable daily log rotation and automatic security updates
+  ansible.builtin.systemd:
+    name: "{{ item }}"
+    enabled: true
+    state: started
+  loop:
+    - logrotate.timer
+    - apt-daily.timer
+    - apt-daily-upgrade.timer
+    - unattended-upgrades.service
+
+- name: Preserve unattended security updates without automatic reboots
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/52infrastructure-unattended-upgrades
+    owner: root
+    group: root
+    mode: "0644"
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+      Unattended-Upgrade::Automatic-Reboot "false";

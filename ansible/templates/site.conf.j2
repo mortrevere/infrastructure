@@ -1,5 +1,6 @@
 {% for server in item.servers %}
 server {
+    include /etc/nginx/snippets/infrastructure-security.conf;
 {% for listen in server.listen | default([]) %}
     listen {{ listen }};
 {% endfor %}

@@ -13,6 +13,7 @@ firewall_allowed_tcp_ports:
   - 443
 firewall_allowed_udp_ports: []
 firewall_extra_input_rules: []
+firewall_extra_forward_rules: []
 
 wireguard_enabled: false
 wireguard_listen_port: 33333
@@ -23,9 +24,11 @@ jinjapocalypse_checkout_dir: /opt/jinjapocalypse
 jinjapocalypse_sites_root: /var/lib/jinjapocalypse-sites
 jinjapocalypse_image_name: jinjapocalypse
 
-umami_repo_url: https://github.com/umami-software/umami.git
-umami_repo_version: HEAD
-umami_checkout_dir: /opt/umami
+umami_config_dir: /etc/umami
+# Pin the multi-architecture release indexes, rather than mutable tags.
+umami_image: docker.umami.is/umami-software/umami:3.4.1@sha256:e69d1a7932e9dab0fc523edc7be1f3a53f3c261f57856fc2167ae74a8fc022e8
+umami_postgres_image: postgres:15-alpine@sha256:cd17e2ac98240fce1541ad2a803b34009b4eea5aec8a832363cdc7eca62e722e
+umami_database_volume: umami_umami-db-data
 
 letsencrypt_dir: /etc/letsencrypt
 letsencrypt_live_dir: "{{ letsencrypt_dir }}/live"

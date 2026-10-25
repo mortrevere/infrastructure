@@ -5,11 +5,26 @@
   gather_facts: true
 
   tasks:
+    - name: Harden SSH, nginx, and service logging
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/tasks/security.yml"
+        apply:
+          tags: [security, hardening]
+      tags: [security, hardening]
+
     - name: Install Docker from Docker's apt repository
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/docker.yml"
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/tasks/docker.yml"
+        apply:
+          tags: [docker]
+      tags: [docker]
 
     - name: Manage nftables firewall
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/firewall.yml"
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/tasks/firewall.yml"
+        apply:
+          tags: [firewall, hardening]
+      tags: [firewall, hardening]
 
     - name: Manage packages and services
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/packages-services.yml"
@@ -20,6 +35,7 @@
       
     - name: Flush nftables reload before continuing
       ansible.builtin.meta: flush_handlers
+      tags: [always]
 
     - name: Prepare nginx for ACME bootstrap
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/nginx.yml"
@@ -28,7 +44,11 @@
       ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/letsencrypt-certificates.yml"
 
     - name: Install Umami
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/umami.yml"
+      ansible.builtin.include_tasks:
+        file: "{{ playbook_dir }}/tasks/umami.yml"
+        apply:
+          tags: [umami]
+      tags: [umami]
 
   handlers:
     - name: Validate nginx
@@ -42,11 +62,22 @@
         state: reloaded
       listen: Reload nginx
 
-    - name: Restart nftables service
+    - name: Reload nftables service
       ansible.builtin.service:
         name: nftables
-        state: restarted
-      listen: Restart nftables
+        state: reloaded
+      listen: Reload nftables
+
+    - name: Validate SSH configuration
+      ansible.builtin.command: /usr/sbin/sshd -t
+      changed_when: false
+      listen: Reload SSH
+
+    - name: Reload SSH service
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+      listen: Reload SSH
 
     - name: Restart docker service
       ansible.builtin.service:
@@ -64,6 +95,7 @@
   hosts: "{{ node_exporter_hosts | default('prod:house') }}"
   become: true
   gather_facts: true
+  tags: [node-exporter]
 
   tasks:
     - name: Install node_exporter
