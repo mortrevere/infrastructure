@@ -98,6 +98,26 @@ dns_zones = {
         value = "100.64.88.3"
       },
       {
+        name  = "black.house"
+        type  = "A"
+        value = "100.64.88.8"
+      },
+      {
+        name  = "docker.house"
+        type  = "A"
+        value = "100.64.88.8"
+      },
+      {
+        name  = "mnemosyne.house"
+        type  = "A"
+        value = "100.64.88.8"
+      },
+      {
+        name  = "black-files.house"
+        type  = "A"
+        value = "100.64.88.8"
+      },
+      {
         name  = "blue.house"
         type  = "A"
         value = "100.64.88.4"
