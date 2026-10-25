@@ -182,6 +182,11 @@ dns_zones = {
         type  = "A"
         value = "91.134.140.52"
       },
+      {
+        name  = "www"
+        type  = "CNAME"
+        value = "leshauts.xyz."
+      },
     ]
   }
 

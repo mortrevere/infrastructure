@@ -8,6 +8,7 @@ server {
     listen 443 ssl;
 {% endif %}
     server_name {{ server.names | join(' ') }};
+    add_header Access-Control-Allow-Origin "https://leo.surf" always;
 {% if server.root is defined %}
     root {{ server.root }};
 {% endif %}
@@ -36,20 +37,18 @@ server {
 {% endif %}
         index  {{ location.index | default('index.html index.htm') }};
         add_header Strict-Transport-Security "max-age=31536000" always;
-{% if location.cors_any_origin | default(false) %}
-        add_header Access-Control-Allow-Origin *;
-{% endif %}
+        add_header Access-Control-Allow-Origin "https://leo.surf" always;
     }
 {% endfor %}
 {% for proxy in server.proxy_locations | default([]) %}
 
     location{% if proxy.exact | default(false) %} ={% endif %} {{ proxy.path }} {
+        add_header Access-Control-Allow-Origin "https://leo.surf" always;
 {% if proxy.redirect_to is defined %}
         return {{ proxy.redirect_code | default(301) }} {{ proxy.redirect_to }};
 {% else %}
         add_header Strict-Transport-Security "max-age=31536000" always;
 {% if proxy.cors | default(false) %}
-        add_header 'Access-Control-Allow-Origin' '*';
         add_header 'Access-Control-Allow-Credentials' 'true';
         add_header 'Access-Control-Allow-Headers' 'Authorization,Accept,Origin,DNT,X-CustomHeader,Keep-Alive,User-Agent,X-Requested-With,If-Modified-Since,Cache-Control,Content-Type,Content-Range,Range,token';
         add_header 'Access-Control-Allow-Methods' 'GET,POST,OPTIONS,PUT,DELETE,PATCH';
@@ -60,6 +59,7 @@ server {
         proxy_set_header X-Forwarded-Host $host;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_redirect off;
+        proxy_hide_header Access-Control-Allow-Origin;
         proxy_pass {{ proxy.upstream }};
 {% endif %}
     }

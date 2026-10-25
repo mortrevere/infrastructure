@@ -29,9 +29,11 @@ certbot_certificates:
   - name: below.industries
     domains:
       - below.industries
+      - www.below.industries
   - name: leshauts.xyz
     domains:
       - leshauts.xyz
+      - www.leshauts.xyz
 
 nginx_required_directories:
   - "{{ nginx_conf_dir }}"
@@ -51,20 +53,23 @@ nginx_sites:
     servers:
       - names:
           - leo.surf
-          - www.leo.surf
         ssl:
           cert_name: leo.surf
         locations:
           - path: /
             root: "{{ nginx_html_root }}/leo.surf/"
-            cors_any_origin: true
+      - names:
+          - www.leo.surf
+        return_directive: "301 https://leo.surf$request_uri"
+        ssl:
+          cert_name: leo.surf
       - names:
           - leo.surf
           - www.leo.surf
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://leo.surf$request_uri"
 
   - name: stats.leo.surf
     servers:
@@ -80,27 +85,30 @@ nginx_sites:
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://stats.leo.surf$request_uri"
 
   - name: estcequilfaitchaud.fr
     www_source: estcequilfaitchaud.fr/index.html
     servers:
       - names:
           - estcequilfaitchaud.fr
-          - www.estcequilfaitchaud.fr
         ssl:
           cert_name: estcequilfaitchaud.fr
         locations:
           - path: /
             root: "{{ nginx_html_root }}/estcequilfaitchaud.fr/"
-            cors_any_origin: true
+      - names:
+          - www.estcequilfaitchaud.fr
+        return_directive: "301 https://estcequilfaitchaud.fr$request_uri"
+        ssl:
+          cert_name: estcequilfaitchaud.fr
       - names:
           - estcequilfaitchaud.fr
           - www.estcequilfaitchaud.fr
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://estcequilfaitchaud.fr$request_uri"
 
   - name: below.industries
     jinjapocalypse_git_source: https://github.com/beLow-Industries/below.industries.git
@@ -112,14 +120,19 @@ nginx_sites:
         locations:
           - path: /
             root: "{{ nginx_html_root }}/below.industries/"
-            cors_any_origin: true
+      - names:
+          - www.below.industries
+        return_directive: "301 https://below.industries$request_uri"
+        ssl:
+          cert_name: below.industries
 
       - names:
           - below.industries
+          - www.below.industries
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://below.industries$request_uri"
 
   - name: leshauts.xyz
     www_source: leshauts.xyz/
@@ -138,13 +151,19 @@ nginx_sites:
           - path: /
             root: "{{ nginx_html_root }}/leshauts.xyz"
         error_pages: true
+      - names:
+          - www.leshauts.xyz
+        return_directive: "301 https://leshauts.xyz$request_uri"
+        ssl:
+          cert_name: leshauts.xyz
 
       - names:
           - leshauts.xyz
+          - www.leshauts.xyz
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://leshauts.xyz$request_uri"
 
   - name: below.black
     jinjapocalypse_git_source: https://github.com/mortrevere/below.black.git
@@ -157,7 +176,6 @@ nginx_sites:
         locations:
           - path: /
             root: "{{ nginx_html_root }}/below.black/"
-            cors_any_origin: true
 
       - names:
           - www.below.black
@@ -170,7 +188,7 @@ nginx_sites:
         listen:
           - "80"
         acme_challenge: true
-        redirect_to_https: "https://$host$request_uri"
+        redirect_to_https: "https://below.black$request_uri"
 
       - names:
           - www.below.black
