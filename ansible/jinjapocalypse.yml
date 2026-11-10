@@ -81,6 +81,6 @@
   ansible.builtin.cron:
     name: "jinjapocalypse rebuild {{ item.name }}"
     user: root
-    special_time: hourly
+    minute: "*/5"
     job: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh >/var/log/jinjapocalypse-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.log 2>&1"
   loop: "{{ nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list }}"

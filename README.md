@@ -35,7 +35,7 @@ Each entry in `ansible/group_vars/prod.yml` declares one website. `www` aliases
 from its name. Set `www: false` for hosts such as `stats.leo.surf`. A site has a
 local `www_source`, a `jinjapocalypse_git_source`, or a proxy `upstream`.
 Local directory sources use `www_deploy_strategy: rsync_checksum`; single files
-use the default copy behavior. Generated sites still rebuild hourly.
+use the default copy behavior. Generated sites rebuild every five minutes.
 
 `--tags web` deploys content and nginx/certificates on a provisioned host without
 upgrading Docker. A missing certificate enables HTTP challenges for that site;
