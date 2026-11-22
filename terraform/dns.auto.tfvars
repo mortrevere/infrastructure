@@ -187,6 +187,11 @@ dns_zones = {
         type  = "CNAME"
         value = "leshauts.xyz."
       },
+      {
+        name  = "playlist"
+        type  = "CNAME"
+        value = "leshauts.xyz."
+      },
     ]
   }
 

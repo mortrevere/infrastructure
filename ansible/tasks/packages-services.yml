@@ -45,6 +45,19 @@
       + (nginx_sites | selectattr('jinjapocalypse_git_source', 'defined') | list)
     }}
 
+- name: Remove git rebuild cron jobs for locally deployed sites
+  ansible.builtin.cron:
+    name: "jinjapocalypse rebuild {{ item.name }}"
+    user: root
+    state: absent
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+
+- name: Remove git rebuild scripts for locally deployed sites
+  ansible.builtin.file:
+    path: "/usr/local/sbin/jinjapocalypse-build-{{ item.name | regex_replace('[^A-Za-z0-9_.-]', '-') }}.sh"
+    state: absent
+  loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
+
 - name: Remove stale declared web content paths before copy
   ansible.builtin.file:
     path: "{{ item.www_dest | default(nginx_html_root ~ '/' ~ item.name ~ '/') }}"
@@ -80,9 +93,9 @@
     delete: true
     use_ssh_args: true
     delay_updates: false
-    rsync_opts:
-      - --delete-excluded
-      - --exclude=.git
+    rsync_opts: >-
+      {{ ['--delete-excluded', '--exclude=.git']
+         + (item.www_excludes | default([]) | map('regex_replace', '^', '--exclude=') | list) }}
   loop: "{{ nginx_sites | selectattr('www_source', 'defined') | list }}"
   become: false
   when: item.www_deploy_strategy | default('copy') == 'rsync_checksum'
@@ -102,6 +115,7 @@
           '--chown=root:root',
           '--chmod=D755'
         ]
+        + (item.www_excludes | default([]) | map('regex_replace', '^', '--exclude=') | list)
         + (ansible_check_mode | ternary(['--dry-run'], []))
         + [
           www_rsync_staging_root ~ '/' ~ item.name ~ '/',

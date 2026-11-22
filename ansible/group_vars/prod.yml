@@ -32,6 +32,11 @@ nginx_sites:
         alias: "{{ nginx_html_root }}/leshauts.xyz/romejko/build/"
     error_pages: true
 
+  - name: playlist.leshauts.xyz
+    www: false
+    www_source: playlist.leshauts.xyz/build/
+    www_deploy_strategy: rsync_checksum
+
   - name: below.black
     jinjapocalypse_git_source: https://github.com/mortrevere/below.black.git
     no_cache: true

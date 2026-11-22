@@ -37,6 +37,14 @@ local `www_source`, a `jinjapocalypse_git_source`, or a proxy `upstream`.
 Local directory sources use `www_deploy_strategy: rsync_checksum`; single files
 use the default copy behavior. Generated sites rebuild every five minutes.
 
+For checksum directory deployments, set an optional per-site `www_excludes` list
+of rsync glob patterns, for example `www_excludes: ['*.log', '/data/']`.
+Patterns are relative to `www_source` and apply during staging and deployment.
+Excluded files are removed from previous deployments; `.git` is always excluded.
+Use a site's generated output directory as its source when one exists.
+`playlist.leshauts.xyz` syncs `../playlist.leshauts.xyz/build/`; rebuild the
+playlist project locally before deploying with `./ansible.sh --tags web`.
+
 `--tags web` deploys content and nginx/certificates on a provisioned host without
 upgrading Docker. A missing certificate enables HTTP challenges for that site;
 existing sites retain HTTPS. Apply DNS before requesting a new certificate.
