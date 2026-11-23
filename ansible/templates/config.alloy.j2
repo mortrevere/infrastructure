@@ -1,0 +1,112 @@
+loki.relabel "journal" {
+  forward_to = []
+  rule {
+    source_labels = ["__journal__systemd_unit"]
+    target_label  = "unit"
+  }
+  rule {
+    source_labels = ["__journal_syslog_identifier"]
+    target_label  = "identifier"
+  }
+}
+
+loki.source.journal "host" {
+  labels        = { host = "{{ inventory_hostname }}", source = "journal" }
+  max_age       = "168h"
+  relabel_rules = loki.relabel.journal.rules
+  forward_to    = [loki.write.black.receiver]
+}
+
+loki.source.file "nginx" {
+  targets = [
+    { __path__ = "/var/log/nginx/access.log", host = "{{ inventory_hostname }}", source = "nginx", stream = "access" },
+    { __path__ = "/var/log/nginx/error.log", host = "{{ inventory_hostname }}", source = "nginx", stream = "error" },
+  ]
+  tail_from_end = true
+  forward_to    = [loki.process.nginx.receiver]
+}
+
+loki.process "nginx" {
+  forward_to = [loki.write.black.receiver]
+  stage.match {
+    selector = "{stream=\"access\"}"
+    stage.regex {
+      expression = `^[^ ]+ [^ ]+ [^ ]+ \[(?P<timestamp>[^\]]+)\]`
+    }
+    stage.timestamp {
+      source            = "timestamp"
+      format            = "02/Jan/2006:15:04:05 -0700"
+      action_on_failure = "skip"
+    }
+  }
+  stage.match {
+    selector = "{stream=\"error\"}"
+    stage.regex {
+      expression = `^(?P<timestamp>\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2})`
+    }
+    stage.timestamp {
+      source            = "timestamp"
+      format            = "2006/01/02 15:04:05"
+      location          = "UTC"
+      action_on_failure = "skip"
+    }
+  }
+}
+
+discovery.docker "umami" {
+  host = "unix:///var/run/docker.sock"
+  filter {
+    name   = "label"
+    values = ["com.docker.compose.project=umami"]
+  }
+}
+
+discovery.relabel "umami" {
+  targets = discovery.docker.umami.targets
+  // Keep the cursor key stable across Docker network and port changes.
+  rule {
+    action = "labelkeep"
+    regex  = "__meta_docker_container_(id|name)"
+  }
+}
+
+loki.relabel "docker" {
+  forward_to = []
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.+)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_log_stream"]
+    target_label  = "stream"
+  }
+  rule {
+    target_label = "host"
+    replacement  = "{{ inventory_hostname }}"
+  }
+  rule {
+    target_label = "source"
+    replacement  = "docker"
+  }
+}
+
+loki.source.docker "umami" {
+  host          = "unix:///var/run/docker.sock"
+  targets       = discovery.relabel.umami.output
+  relabel_rules = loki.relabel.docker.rules
+  forward_to    = [loki.write.black.receiver]
+}
+
+loki.write "black" {
+  endpoint {
+    url = "https://100.64.88.8:3100/loki/api/v1/push"
+    tls_config {
+      server_name = "black.house.leo.surf"
+    }
+    basic_auth {
+      username      = "loki"
+      password_file = "/run/secrets/loki-password"
+    }
+  }
+}

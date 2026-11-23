@@ -91,3 +91,16 @@ Then run Terraform:
 ./terraform.sh && ./ansible.sh
 ```
 
+
+## Central logs
+
+`./ansible.sh --tags alloy --limit vps-prod` starts the Alloy container on
+vps-prod after Loki is ready on Black. Provision the shared root-owned mode
+`0600` password at `/etc/alloy/secrets/loki-password` first. Alloy pushes to
+Black's WireGuard address and verifies the TLS certificate for
+`black.house.leo.surf`. It reads the journal, active nginx logs, and Umami's
+Docker logs. The local Docker socket gives the collector daemon access.
+
+Alloy stores read positions in `/var/lib/alloy`. Preserve that directory when
+recreating the container. To stop collection, run
+`sudo docker compose -p alloy -f /etc/alloy/compose.yml down`.

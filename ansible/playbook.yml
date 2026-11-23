@@ -50,6 +50,11 @@
       ansible.builtin.import_tasks: tasks/node-exporter.yml
       tags: [node-exporter]
 
+    - name: Manage Alloy
+      ansible.builtin.import_tasks: tasks/alloy.yml
+      when: inventory_hostname == "vps-prod"
+      tags: [alloy]
+
   handlers:
     - name: Validate nginx
       ansible.builtin.command: nginx -t

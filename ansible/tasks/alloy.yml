@@ -1,0 +1,62 @@
+---
+- name: Check provisioned Loki password
+  ansible.builtin.stat:
+    path: /etc/alloy/secrets/loki-password
+  register: alloy_loki_password
+
+- name: Require a root-only Loki password before starting Alloy
+  ansible.builtin.assert:
+    that:
+      - alloy_loki_password.stat.isreg | default(false)
+      - alloy_loki_password.stat.uid == 0
+      - alloy_loki_password.stat.mode == '0600'
+      - alloy_loki_password.stat.size > 0
+    fail_msg: Provision /etc/alloy/secrets/loki-password before deploying Alloy.
+
+- name: Create Alloy directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+  loop:
+    - /etc/alloy
+    - /var/lib/alloy
+
+- name: Install Alloy configuration
+  ansible.builtin.template:
+    src: "{{ item.src }}"
+    dest: "{{ item.dest }}"
+    owner: root
+    group: root
+    mode: "0600"
+  loop:
+    - { src: alloy-compose.yml.j2, dest: /etc/alloy/compose.yml }
+    - { src: config.alloy.j2, dest: /etc/alloy/config.alloy }
+  register: alloy_config
+
+- name: Seed Alloy positions before its first start
+  ansible.builtin.script: seed-alloy.py
+  args:
+    executable: /usr/bin/python3
+    creates: /var/lib/alloy/loki.source.docker.umami/positions.yml
+  when: not ansible_check_mode
+
+- name: Validate Alloy configuration in its container
+  ansible.builtin.command:
+    argv: [docker, compose, --project-name, alloy, --file, /etc/alloy/compose.yml, run, --rm, --no-deps, alloy, validate, /etc/alloy/config.alloy]
+  changed_when: false
+  when: not ansible_check_mode
+
+- name: Apply the Alloy Compose project
+  ansible.builtin.command:
+    argv: >-
+      {{
+        ['docker', 'compose', '--project-name', 'alloy', '--file', '/etc/alloy/compose.yml',
+         'up', '--detach', '--wait']
+        + (alloy_config.changed | ternary(['--force-recreate'], []))
+      }}
+  register: alloy_compose
+  changed_when: "alloy_compose.stderr is search('(?i)creating|created|recreating|recreated|starting|started')"
+  when: not ansible_check_mode
