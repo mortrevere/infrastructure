@@ -55,6 +55,11 @@
       when: inventory_hostname == "vps-prod"
       tags: [alloy]
 
+    - name: Manage Argus agent
+      ansible.builtin.import_tasks: tasks/argus-agent.yml
+      when: inventory_hostname == "vps-prod"
+      tags: [argus-agent]
+
   handlers:
     - name: Validate nginx
       ansible.builtin.command: nginx -t

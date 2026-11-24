@@ -30,6 +30,14 @@ Apply host hardening without rebuilding websites or upgrading Docker:
 only the host policy and preserve Docker's tables. Public SSH requires keys;
 WireGuard peer routing and VPN-only metrics remain available.
 
+Build the Argus agent from the sibling Argus checkout with
+`../argus/argus-agent/build.sh`, then run
+`./ansible.sh --tags argus-agent --limit vps-prod`.
+To set the exempt addresses, pass the extra variable
+`argus_agent_allowlist` as a JSON list of exact IPs. Omitting it preserves
+the host's environment file. The agent owns the live `inet argus` table.
+To remove its blocks, stop the service and run `sudo nft destroy table inet argus`.
+
 Each entry in `ansible/group_vars/prod.yml` declares one website. `www` aliases
 (default: enabled), HTTPS redirects, certificate domains, and web roots are derived
 from its name. Set `www: false` for hosts such as `stats.leo.surf`. A site has a

@@ -1,0 +1,22 @@
+[Unit]
+Description=Argus countermeasure agent
+Wants=network-online.target wg-quick@wg0.service nftables.service
+After=network-online.target wg-quick@wg0.service nftables.service
+
+[Service]
+Environment=ARGUS_AGENT_HOST={{ inventory_hostname }}
+Environment=ARGUS_AGENT_API_PEER=100.64.88.8:443
+Environment=ARGUS_AGENT_VPN_INTERFACE=wg0
+Environment=ARGUS_AGENT_PUBLIC_INTERFACE={{ ansible_facts.default_ipv4.interface }}
+Environment=ARGUS_AGENT_WIREGUARD_PORT={{ wireguard_listen_port }}
+EnvironmentFile=-/etc/argus-agent.env
+ExecStart=/usr/local/bin/argus-agent
+DynamicUser=yes
+CapabilityBoundingSet=CAP_NET_ADMIN
+AmbientCapabilities=CAP_NET_ADMIN
+NoNewPrivileges=yes
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

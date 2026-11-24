@@ -1,0 +1,36 @@
+---
+- name: Install the local Argus agent executable
+  ansible.builtin.copy:
+    src: "{{ www_source_root }}/argus/argus-agent/build/argus-agent"
+    dest: /usr/local/bin/argus-agent
+    owner: root
+    group: root
+    mode: "0755"
+  register: argus_agent_binary
+
+- name: Configure exempt IPs
+  ansible.builtin.copy:
+    content: "ARGUS_AGENT_ALLOWLIST={{ argus_agent_allowlist | join(',') }}\n"
+    dest: /etc/argus-agent.env
+    owner: root
+    group: root
+    mode: "0600"
+  when: argus_agent_allowlist is defined
+  register: argus_agent_environment
+
+- name: Install the Argus agent systemd unit
+  ansible.builtin.template:
+    src: argus-agent.service.j2
+    dest: /etc/systemd/system/argus-agent.service
+    owner: root
+    group: root
+    mode: "0644"
+  register: argus_agent_unit
+
+- name: Enable and start the Argus agent
+  ansible.builtin.systemd_service:
+    name: argus-agent.service
+    daemon_reload: "{{ argus_agent_unit.changed }}"
+    enabled: true
+    state: "{{ (argus_agent_binary.changed or argus_agent_unit.changed or argus_agent_environment.changed) | ternary('restarted', 'started') }}"
+  when: not ansible_check_mode
