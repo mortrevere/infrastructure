@@ -98,7 +98,17 @@ dns_zones = {
         value = "100.64.88.3"
       },
       {
+        name  = "inference.house"
+        type  = "A"
+        value = "100.64.88.3"
+      },
+      {
         name  = "black.house"
+        type  = "A"
+        value = "100.64.88.8"
+      },
+      {
+        name  = "argus.house"
         type  = "A"
         value = "100.64.88.8"
       },
@@ -131,6 +141,11 @@ dns_zones = {
         name  = "cinema.house"
         type  = "A"
         value = "100.64.88.4"
+      },
+      {
+        name  = "photos.house"
+        type  = "A"
+        value = "100.64.88.8"
       },
       {
         name  = "transmission.house"

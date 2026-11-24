@@ -4,12 +4,19 @@
     name:
       - nginx
       - nftables
-      - openssh-server
       - logrotate
       - unattended-upgrades
     state: present
     update_cache: true
     cache_valid_time: 3600
+
+- name: Upgrade OpenSSH from the configured APT repositories
+  ansible.builtin.apt:
+    name: openssh-server
+    state: latest
+    update_cache: true
+    cache_valid_time: 3600
+  notify: Reload SSH
 
 - name: Ensure SSH and nginx snippet directories exist
   ansible.builtin.file:
@@ -22,7 +29,7 @@
     - /etc/ssh/sshd_config.d
     - /etc/nginx/snippets
 
-- name: Enforce SSH keys before cloud-init defaults are read
+- name: Enforce SSH authentication and algorithm policy before cloud-init defaults
   ansible.builtin.copy:
     dest: /etc/ssh/sshd_config.d/00-infrastructure.conf
     owner: root
@@ -35,6 +42,11 @@
       PasswordAuthentication no
       KbdInteractiveAuthentication no
       PermitRootLogin no
+      # Exclude finite-field DH, legacy 64-bit block ciphers, and DSA.
+      KexAlgorithms -diffie-hellman-*
+      Ciphers -3des-*,blowfish-*
+      HostKeyAlgorithms -ssh-dss*
+      PubkeyAcceptedAlgorithms -ssh-dss*
   notify: Reload SSH
 
 - name: Deny hidden files without blocking ACME challenges
